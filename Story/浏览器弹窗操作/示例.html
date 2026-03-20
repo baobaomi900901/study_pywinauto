@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>dialog</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      button {
+        margin-right: 10px;
+        padding: 8px 16px;
+      }
+      #result {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        min-height: 50px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>弹窗演示 - 点击结果显示在页面</h1>
+
+    <button id="btnAlert">显示 alert</button>
+    <button id="btnPrompt">显示 prompt</button>
+    <button id="btnConfirm">显示 confirm</button>
+
+    <div id="result">这里会显示您的点击结果...</div>
+
+    <script>
+      const resultDiv = document.getElementById('result');
+
+      document.getElementById('btnAlert').addEventListener('click', () => {
+        alert('这是一个 alert 消息');
+        resultDiv.innerHTML = '<p style="color:blue;">您点击了 alert 的“确定”按钮（alert 只有确定）</p>';
+      });
+
+      document.getElementById('btnPrompt').addEventListener('click', () => {
+        const input = prompt('请输入一些内容：', '默认值');
+        if (input !== null) {
+          resultDiv.innerHTML = `<p style="color:green;">您点击了 prompt 的“确定”，输入的内容是：${input}</p>`;
+        } else {
+          resultDiv.innerHTML = '<p style="color:red;">您点击了 prompt 的“取消”或按了 ESC</p>';
+        }
+      });
+
+      document.getElementById('btnConfirm').addEventListener('click', () => {
+        const confirmed = confirm('你确定吗？');
+        if (confirmed) {
+          resultDiv.innerHTML = '<p style="color:green;">您点击了 confirm 的“确定”</p>';
+        } else {
+          resultDiv.innerHTML = '<p style="color:red;">您点击了 confirm 的“取消”</p>';
+        }
+      });
+    </script>
+  </body>
+</html>
