@@ -1,0 +1,6 @@
+2026-03-30 19:33:33.781 Multi-level_positioning_elements.py[91] locate_element_by_path -> Find Control Timeout(10s): {timeout: 3.0, AutomationId: '1446454', ControlType: PaneControl}
+2026-03-30 19:36:51.907 Multi-level_positioning_elements.py[91] locate_element_by_path -> Find Control Timeout(10s): {timeout: 3.0, ClassName: 'TScpCommanderForm', ControlType: WindowControl}
+2026-03-30 19:37:31.328 Multi-level_positioning_elements.py[91] locate_element_by_path -> Find Control Timeout(10s): {timeout: 3.0, ClassName: 'TScpCommanderForm'}
+2026-03-31 09:11:51.994 Multi-level_positioning_elements.py[158] locate_element_by_path -> Find Control Timeout(10s): {timeout: 3.0, Name: '本地选择', ControlType: ToolBarControl}
+2026-03-31 10:16:14.182 demo.py[6] control_to_xml -> Find Control Timeout(10s): {Name: '记事本', ControlType: WindowControl}
+2026-03-31 10:16:59.646 demo.py[6] control_to_xml -> Find Control Timeout(10s): {Name: '无标题', ControlType: WindowControl}

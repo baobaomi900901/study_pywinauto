@@ -1,0 +1,195 @@
+<?xml version='1.0' encoding='utf-8'?>
+<WindowControl Name="应用 – lite_oss – WinSCP" AutomationId="" ClassName="TScpCommanderForm" ControlType="WindowControl" IsEnabled="True" IsOffscreen="False">
+  <PaneControl Name="" AutomationId="1184170" ClassName="TTBXStatusBar" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" />
+  <PaneControl Name="" AutomationId="983160" ClassName="TTBXDock" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" />
+  <PaneControl Name="" AutomationId="660878" ClassName="TPanel" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False">
+    <PaneControl Name="" AutomationId="8784234" ClassName="TTBXDock" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" />
+    <PaneControl Name="" AutomationId="919894" ClassName="TTBXDock" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False">
+      <ToolBarControl Name="本地选择" AutomationId="1181860" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+        <ButtonControl Name="选择文件" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <ButtonControl Name="反向选择文件" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+        <ButtonControl Name="全选" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      </ToolBarControl>
+      <ToolBarControl Name="本地文件" AutomationId="1052636" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+        <MenuItemControl Name="上传" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="False" IsOffscreen="False" />
+        <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+        <MenuItemControl Name="编辑" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="False" IsOffscreen="False" />
+        <ButtonControl Name="删除" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+        <ButtonControl Name="重命名" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+        <MenuItemControl Name="属性" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="False" IsOffscreen="False" />
+        <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+        <MenuItemControl Name="新建" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      </ToolBarControl>
+      <ToolBarControl Name="本地路径" AutomationId="2491444" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+        <ComboBoxControl Name="" AutomationId="" ClassName="" ControlType="ComboBoxControl" IsEnabled="True" IsOffscreen="False" />
+        <MenuItemControl Name="打开目录/书签" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+        <MenuItemControl Name="过滤..." AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      </ToolBarControl>
+      <ToolBarControl Name="本地导航" AutomationId="5898932" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+        <ButtonControl Name="上级目录" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <ButtonControl Name="根目录" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <ButtonControl Name="主目录" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <ButtonControl Name="刷新" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+        <ButtonControl Name="目录树" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <MenuItemControl Name="更改目录视图样式" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      </ToolBarControl>
+      <ToolBarControl Name="本地历史" AutomationId="725608" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+        <MenuItemControl Name="返回" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="False" IsOffscreen="False" />
+        <MenuItemControl Name="前进" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="False" IsOffscreen="False" />
+      </ToolBarControl>
+    </PaneControl>
+    <ListControl Name="" AutomationId="1311508" ClassName="TDirView" ControlType="ListControl" IsEnabled="True" IsOffscreen="False">
+      <HeaderControl Name="标头控件" AutomationId="Header" ClassName="SysHeader32" ControlType="HeaderControl" IsEnabled="True" IsOffscreen="False">
+        <HeaderItemControl Name="扩展" AutomationId="HeaderItem 5" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="True" />
+        <HeaderItemControl Name="属性" AutomationId="HeaderItem 4" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="True" />
+        <HeaderItemControl Name="名字" AutomationId="HeaderItem 0" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="False" />
+        <HeaderItemControl Name="大小" AutomationId="HeaderItem 1" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="False" />
+        <HeaderItemControl Name="类型" AutomationId="HeaderItem 2" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="False" />
+        <HeaderItemControl Name="已改变" AutomationId="HeaderItem 3" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="False" />
+      </HeaderControl>
+      <ListItemControl Name=".." AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+      <ListItemControl Name="AccessibilityInsights" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+      <ListItemControl Name="CnWizards" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+      <ListItemControl Name="Embarcadero" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+      <ListItemControl Name="PowerShell" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+      <ListItemControl Name="RAD Studio" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+      <ListItemControl Name="WeChat Files" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+      <ListItemControl Name="WindowsPowerShell" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+      <ListItemControl Name="WXWork" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+      <ListItemControl Name="xwechat_files" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+      <ListItemControl Name="自定义 Office 模板" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+    </ListControl>
+    <PaneControl Name="" AutomationId="2164810" ClassName="TTBXStatusBar" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" />
+  </PaneControl>
+  <TabControl Name="" AutomationId="2887228" ClassName="TThemePageControl" ControlType="TabControl" IsEnabled="True" IsOffscreen="False">
+    <PaneControl Name="lite_oss     " AutomationId="791254" ClassName="TThemeTabSheet" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" />
+    <TabItemControl Name="lite_oss     " AutomationId="" ClassName="" ControlType="TabItemControl" IsEnabled="True" IsOffscreen="False" />
+    <TabItemControl Name="新标签页     " AutomationId="" ClassName="" ControlType="TabItemControl" IsEnabled="True" IsOffscreen="False" />
+  </TabControl>
+  <PaneControl Name="" AutomationId="1050064" ClassName="TPanel" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False">
+    <PaneControl Name="" AutomationId="2427104" ClassName="TTBXDock" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" />
+    <PaneControl Name="" AutomationId="5180126" ClassName="TTBXDock" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False">
+      <ToolBarControl Name="远程选择" AutomationId="4263842" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+        <ButtonControl Name="选择文件" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <ButtonControl Name="反向选择文件" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+        <ButtonControl Name="全选" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      </ToolBarControl>
+      <ToolBarControl Name="远程文件" AutomationId="1640638" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+        <MenuItemControl Name="下载" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="False" IsOffscreen="False" />
+        <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+        <MenuItemControl Name="编辑" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="False" IsOffscreen="False" />
+        <ButtonControl Name="删除" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+        <ButtonControl Name="重命名" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+        <MenuItemControl Name="属性" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="False" IsOffscreen="False" />
+        <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+        <MenuItemControl Name="新建" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      </ToolBarControl>
+      <ToolBarControl Name="远程路径" AutomationId="2493008" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+        <ComboBoxControl Name="" AutomationId="" ClassName="" ControlType="ComboBoxControl" IsEnabled="True" IsOffscreen="False" />
+        <MenuItemControl Name="打开目录/书签" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+        <MenuItemControl Name="过滤..." AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      </ToolBarControl>
+      <ToolBarControl Name="远程导航" AutomationId="1968310" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+        <ButtonControl Name="上级目录" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <ButtonControl Name="根目录" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <ButtonControl Name="主目录" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <ButtonControl Name="刷新" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+        <ButtonControl Name="查找文件" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+        <ButtonControl Name="目录树" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+        <MenuItemControl Name="更改目录视图样式" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      </ToolBarControl>
+      <ToolBarControl Name="远程历史" AutomationId="852690" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+        <MenuItemControl Name="后退" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="False" IsOffscreen="False" />
+        <MenuItemControl Name="前进" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="False" IsOffscreen="False" />
+      </ToolBarControl>
+    </PaneControl>
+    <PaneControl Name="" AutomationId="2491224" ClassName="TPanel" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False">
+      <ListControl Name="" AutomationId="787792" ClassName="TUnixDirView" ControlType="ListControl" IsEnabled="True" IsOffscreen="False">
+        <HeaderControl Name="标头控件" AutomationId="Header" ClassName="SysHeader32" ControlType="HeaderControl" IsEnabled="True" IsOffscreen="False">
+          <HeaderItemControl Name="扩展" AutomationId="HeaderItem 6" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="True" />
+          <HeaderItemControl Name="连接目标" AutomationId="HeaderItem 7" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="True" />
+          <HeaderItemControl Name="类型" AutomationId="HeaderItem 8" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="True" />
+          <HeaderItemControl Name="组" AutomationId="HeaderItem 5" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="True" />
+          <HeaderItemControl Name="名字" AutomationId="HeaderItem 0" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="False" />
+          <HeaderItemControl Name="大小" AutomationId="HeaderItem 1" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="False" />
+          <HeaderItemControl Name="已改变" AutomationId="HeaderItem 2" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="False" />
+          <HeaderItemControl Name="权限" AutomationId="HeaderItem 3" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="False" />
+          <HeaderItemControl Name="拥有者" AutomationId="HeaderItem 4" ClassName="" ControlType="HeaderItemControl" IsEnabled="True" IsOffscreen="False" />
+        </HeaderControl>
+        <ListItemControl Name=".." AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+        <ListItemControl Name="示例_新建透视表.zip" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+        <ListItemControl Name="示例_if多条件.krpa" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+        <ListItemControl Name="示例_IF文件存在.krpa" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+        <ListItemControl Name="示例_if条件.krpa" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+        <ListItemControl Name="outlook.krpa" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+        <ListItemControl Name="保存pdf.krpa" AutomationId="" ClassName="" ControlType="ListItemControl" IsEnabled="True" IsOffscreen="False" />
+      </ListControl>
+    </PaneControl>
+    <PaneControl Name="" AutomationId="14092958" ClassName="TTBXStatusBar" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" />
+  </PaneControl>
+  <PaneControl Name="" AutomationId="2033874" ClassName="TTBXDock" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False">
+    <ToolBarControl Name="自定义命令" AutomationId="3477244" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+      <ButtonControl Name="执行" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="Touch" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="Tar/GZip" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="UnTar/GZip" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="Grep" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="打印" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="输入" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="生成文件URL2" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="与另一台远程服务器同步" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      <ButtonControl Name="保持当前目录是最新状态" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      <ButtonControl Name="压缩ZIP文件并上传" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="压缩并下载" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="批量重命名" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="查找文本" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="自定义" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      <MenuItemControl Name="More Buttons" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+    </ToolBarControl>
+    <ToolBarControl Name="传输选项" AutomationId="526616" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+      <ButtonControl Name="传输选项" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ComboBoxControl Name="" AutomationId="" ClassName="" ControlType="ComboBoxControl" IsEnabled="True" IsOffscreen="False" />
+    </ToolBarControl>
+    <ToolBarControl Name="更新" AutomationId="2034682" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+      <MenuItemControl Name="检查更新" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+    </ToolBarControl>
+    <ToolBarControl Name="命令" AutomationId="987544" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+      <ButtonControl Name="比较目录" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      <ButtonControl Name="保持远程目录是最新状态" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      <ButtonControl Name="同步" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="打开终端" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="在PuTTY中打开" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+      <ButtonControl Name="同步浏览" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+    </ToolBarControl>
+    <ToolBarControl Name="选项" AutomationId="1444200" ClassName="TTBXToolbar" ControlType="ToolBarControl" IsEnabled="True" IsOffscreen="False">
+      <ButtonControl Name="选项" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+      <SeparatorControl Name="" AutomationId="" ClassName="" ControlType="SeparatorControl" IsEnabled="False" IsOffscreen="False" />
+      <MenuItemControl Name="队列" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+    </ToolBarControl>
+    <MenuBarControl Name="菜单" AutomationId="6295218" ClassName="TTBXToolbar" ControlType="MenuBarControl" IsEnabled="True" IsOffscreen="False">
+      <MenuItemControl Name="本地(L)" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      <MenuItemControl Name="标记(M)" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      <MenuItemControl Name="文件(F)" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      <MenuItemControl Name="命令(C)" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      <MenuItemControl Name="标签页(T)" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      <MenuItemControl Name="选项(O)" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      <MenuItemControl Name="远程(R)" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+      <MenuItemControl Name="帮助(H)" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+    </MenuBarControl>
+  </PaneControl>
+  <TitleBarControl Name="" AutomationId="" ClassName="" ControlType="TitleBarControl" IsEnabled="True" IsOffscreen="False">
+    <MenuBarControl Name="系统" AutomationId="MenuBar" ClassName="" ControlType="MenuBarControl" IsEnabled="True" IsOffscreen="False">
+      <MenuItemControl Name="系统" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" />
+    </MenuBarControl>
+    <ButtonControl Name="最小化" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+    <ButtonControl Name="最大化" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+    <ButtonControl Name="关闭" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" />
+  </TitleBarControl>
+</WindowControl>

@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<WindowControl Name="无标题.txt - Notepad" AutomationId="" ClassName="Notepad" ControlType="WindowControl" IsEnabled="True" IsOffscreen="False" x="513" y="328" width="878" height="828">
+  <PaneControl Name="" AutomationId="" ClassName="NotepadTextBox" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" x="519" y="403" width="866" height="715">
+    <DocumentControl Name="文本编辑器" AutomationId="" ClassName="RichEditD2DPT" ControlType="DocumentControl" IsEnabled="True" IsOffscreen="False" x="519" y="403" width="866" height="715"/>
+  </PaneControl>
+  <PaneControl Name="" AutomationId="" ClassName="Microsoft.UI.Content.DesktopChildSiteBridge" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" x="559" y="338" width="287" height="32">
+    <PaneControl Name="" AutomationId="" ClassName="InputSiteWindowClass" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" x="559" y="338" width="287" height="32">
+      <TabControl Name="" AutomationId="Tabs" ClassName="Microsoft.UI.Xaml.Controls.TabView" ControlType="TabControl" IsEnabled="True" IsOffscreen="False" x="559" y="338" width="287" height="32">
+        <ListControl Name="" AutomationId="TabListView" ClassName="ListView" ControlType="ListControl" IsEnabled="True" IsOffscreen="False" x="561" y="338" width="248" height="32">
+          <TabItemControl Name="无标题.txt. 未修改。" AutomationId="" ClassName="ListViewItem" ControlType="TabItemControl" IsEnabled="True" IsOffscreen="False" x="563" y="338" width="246" height="32">
+            <TextControl Name="无标题.txt" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="576" y="346" width="54" height="15"/>
+            <ButtonControl Name="关闭标签页" AutomationId="CloseButton" ClassName="Button" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="768" y="342" width="32" height="24">
+              <TextControl Name="" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="778" y="348" width="12" height="12"/>
+            </ButtonControl>
+          </TabItemControl>
+        </ListControl>
+        <ButtonControl Name="添加新标签页" AutomationId="AddButton" ClassName="Button" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="812" y="343" width="32" height="24">
+          <TextControl Name="" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="822" y="349" width="12" height="12"/>
+        </ButtonControl>
+      </TabControl>
+    </PaneControl>
+  </PaneControl>
+  <PaneControl Name="" AutomationId="" ClassName="Microsoft.UI.Content.DesktopChildSiteBridge" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" x="519" y="370" width="866" height="33">
+    <PaneControl Name="" AutomationId="" ClassName="InputSiteWindowClass" ControlType="PaneControl" IsEnabled="True" IsOffscreen="False" x="519" y="370" width="866" height="33">
+      <MenuBarControl Name="" AutomationId="MenuBar" ClassName="" ControlType="MenuBarControl" IsEnabled="True" IsOffscreen="False" x="519" y="370" width="168" height="32">
+        <MenuItemControl Name="文件" AutomationId="File" ClassName="Microsoft.UI.Xaml.Controls.MenuBarItem" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" x="523" y="370" width="48" height="32">
+          <ButtonControl Name="文件" AutomationId="ContentButton" ClassName="Button" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="523" y="370" width="48" height="32">
+            <TextControl Name="文件" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="533" y="377" width="28" height="19"/>
+          </ButtonControl>
+        </MenuItemControl>
+        <MenuItemControl Name="编辑" AutomationId="Edit" ClassName="Microsoft.UI.Xaml.Controls.MenuBarItem" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" x="579" y="370" width="48" height="32">
+          <ButtonControl Name="编辑" AutomationId="ContentButton" ClassName="Button" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="579" y="370" width="48" height="32">
+            <TextControl Name="编辑" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="589" y="377" width="28" height="19"/>
+          </ButtonControl>
+        </MenuItemControl>
+        <MenuItemControl Name="查看" AutomationId="View" ClassName="Microsoft.UI.Xaml.Controls.MenuBarItem" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" x="635" y="370" width="48" height="32">
+          <ButtonControl Name="查看" AutomationId="ContentButton" ClassName="Button" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="635" y="370" width="48" height="32">
+            <TextControl Name="查看" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="645" y="377" width="28" height="19"/>
+          </ButtonControl>
+        </MenuItemControl>
+      </MenuBarControl>
+      <ButtonControl Name="标题" AutomationId="" ClassName="Microsoft.UI.Xaml.Controls.DropDownButton" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="788" y="370" width="56" height="32">
+        <TextControl Name="" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="799" y="379" width="14" height="14"/>
+      </ButtonControl>
+      <ButtonControl Name="列表" AutomationId="" ClassName="Microsoft.UI.Xaml.Controls.DropDownButton" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="844" y="370" width="56" height="32">
+        <TextControl Name="" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="855" y="379" width="14" height="14"/>
+      </ButtonControl>
+      <ButtonControl Name="加粗(Ctrl+B)" AutomationId="" ClassName="ToggleButton" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="900" y="370" width="32" height="32">
+        <TextControl Name="" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="909" y="379" width="14" height="14"/>
+      </ButtonControl>
+      <ButtonControl Name="斜体(Ctrl+I)" AutomationId="" ClassName="ToggleButton" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="932" y="370" width="32" height="32">
+        <TextControl Name="" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="941" y="379" width="14" height="14"/>
+      </ButtonControl>
+      <ButtonControl Name="删除线(Ctrl+Shift+X)" AutomationId="" ClassName="ToggleButton" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="964" y="370" width="32" height="32">
+        <TextControl Name="" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="973" y="379" width="14" height="14"/>
+      </ButtonControl>
+      <ButtonControl Name="链接(Ctrl+K)" AutomationId="" ClassName="ToggleButton" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="996" y="370" width="32" height="32">
+        <TextControl Name="" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="1005" y="379" width="14" height="14"/>
+      </ButtonControl>
+      <ButtonControl Name="表" AutomationId="" ClassName="Microsoft.UI.Xaml.Controls.DropDownButton" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="1028" y="370" width="56" height="32">
+        <TextControl Name="" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="1039" y="379" width="14" height="14"/>
+      </ButtonControl>
+      <ButtonControl Name="清除格式设置(Ctrl+空格)" AutomationId="" ClassName="ToggleButton" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="1084" y="370" width="32" height="32">
+        <TextControl Name="" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="1093" y="379" width="14" height="14"/>
+      </ButtonControl>
+      <ButtonControl Name="Copilot (预览)" AutomationId="RewriteDropDownButton" ClassName="Microsoft.UI.Xaml.Controls.DropDownButton" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="1217" y="370" width="58" height="32">
+        <ImageControl Name="" AutomationId="" ClassName="Image" ControlType="ImageControl" IsEnabled="True" IsOffscreen="False" x="1228" y="378" width="16" height="16"/>
+      </ButtonControl>
+      <ButtonControl Name="最近更新" AutomationId="FREButton" ClassName="Button" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="1279" y="371" width="30" height="30">
+        <TextControl Name="" AutomationId="" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="1287" y="379" width="14" height="14"/>
+      </ButtonControl>
+      <ButtonControl Name="用户头像" AutomationId="AvatarButton" ClassName="Button" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="1313" y="370" width="30" height="32">
+        <TextControl Name="用户" AutomationId="Avatar" ClassName="Microsoft.UI.Xaml.Controls.PersonPicture" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="1318" y="376" width="20" height="20">
+          <TextControl Name="" AutomationId="InitialsTextBlock" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="1324" y="382" width="9" height="9"/>
+        </TextControl>
+      </ButtonControl>
+      <ProgressBarControl Name="" AutomationId="LoadingRing" ClassName="Microsoft.UI.Xaml.Controls.ProgressRing" ControlType="ProgressBarControl" IsEnabled="True" IsOffscreen="False" x="1318" y="376" width="20" height="20">
+        <ImageControl Name="" AutomationId="LottiePlayer" ClassName="Microsoft.UI.Xaml.Controls.AnimatedVisualPlayer" ControlType="ImageControl" IsEnabled="True" IsOffscreen="False" x="1318" y="376" width="20" height="20"/>
+      </ProgressBarControl>
+      <ButtonControl Name="设置" AutomationId="SettingsButton" ClassName="Button" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="1347" y="370" width="30" height="32"/>
+      <WindowControl Name="" AutomationId="PrivacyTeachingTip" ClassName="Microsoft.UI.Xaml.Controls.TeachingTip" ControlType="WindowControl" IsEnabled="True" IsOffscreen="True" x="0" y="0" width="0" height="0"/>
+      <PaneControl Name="" AutomationId="PsDownloadDetailTeachingTip" ClassName="Microsoft.UI.Xaml.Controls.TeachingTip" ControlType="PaneControl" IsEnabled="True" IsOffscreen="True" x="0" y="0" width="0" height="0"/>
+      <PaneControl Name="本地模型必须完成下载才可在注销后使用 AI 功能。" AutomationId="PsDownloadLightTeachingTip" ClassName="Microsoft.UI.Xaml.Controls.TeachingTip" ControlType="PaneControl" IsEnabled="True" IsOffscreen="True" x="0" y="0" width="0" height="0"/>
+    </PaneControl>
+  </PaneControl>
+  <PaneControl Name="" AutomationId="" ClassName="Microsoft.UI.Content.DesktopChildSiteBridge" ControlType="PaneControl" IsEnabled="False" IsOffscreen="False" x="519" y="1118" width="866" height="32">
+    <PaneControl Name="" AutomationId="" ClassName="InputSiteWindowClass" ControlType="PaneControl" IsEnabled="False" IsOffscreen="False" x="519" y="1118" width="866" height="32">
+      <TextControl Name="行 1，&#10;列 1" AutomationId="ContentTextBlock" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="535" y="1126" width="64" height="16"/>
+      <TextControl Name="0 个字符" AutomationId="ContentTextBlock" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="624" y="1126" width="46" height="16"/>
+      <TextControl Name="纯文本" AutomationId="ContentTextBlock" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="812" y="1118" width="48" height="32"/>
+      <TextControl Name="缩放" AutomationId="ContentTextBlock" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="1014" y="1126" width="33" height="16"/>
+      <TextControl Name=" Windows (CRLF)" AutomationId="ContentTextBlock" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="1082" y="1126" width="89" height="16"/>
+      <TextControl Name=" UTF-8" AutomationId="ContentTextBlock" ClassName="TextBlock" ControlType="TextControl" IsEnabled="True" IsOffscreen="False" x="1250" y="1126" width="35" height="16"/>
+    </PaneControl>
+  </PaneControl>
+  <TitleBarControl Name="" AutomationId="" ClassName="" ControlType="TitleBarControl" IsEnabled="True" IsOffscreen="True" x="0" y="0" width="0" height="0">
+    <MenuBarControl Name="系统" AutomationId="MenuBar" ClassName="" ControlType="MenuBarControl" IsEnabled="True" IsOffscreen="False" x="521" y="336" width="22" height="22">
+      <MenuItemControl Name="系统" AutomationId="" ClassName="" ControlType="MenuItemControl" IsEnabled="True" IsOffscreen="False" x="521" y="336" width="22" height="22"/>
+    </MenuBarControl>
+    <ButtonControl Name="最小化" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="1246" y="329" width="47" height="30"/>
+    <ButtonControl Name="最大化" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="1293" y="329" width="46" height="30"/>
+    <ButtonControl Name="关闭" AutomationId="" ClassName="" ControlType="ButtonControl" IsEnabled="True" IsOffscreen="False" x="1339" y="329" width="47" height="30"/>
+  </TitleBarControl>
+</WindowControl>

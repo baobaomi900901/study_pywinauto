@@ -1,5 +1,8 @@
 ﻿import uiautomation as auto
 import time
+from typing import Optional
+
+# ==================== 原有辅助函数 ====================
 
 def get_edit_control(control):
     """递归查找并返回第一个 EditControl（输入框）"""
@@ -103,16 +106,48 @@ def get_button_intent_mapping():
         # 可根据需要继续添加其他意图
     }
 
+# ==================== 新增的通用对话框定位函数 ====================
+
+def find_dialog_window(title_base: str) -> Optional[auto.WindowControl]:
+    """
+    根据页面标题 title_base 定位 Chrome 的 alert/confirm/prompt 对话框窗口。
+    返回 WindowControl 对象，如果找不到则返回 None。
+    """
+    # 1. 尝试精确匹配常见后缀（中文“显示”和英文“says”）
+    for suffix in [" 显示", " says"]:
+        exact_name = title_base + suffix
+        dlg = auto.WindowControl(Name=exact_name)
+        if dlg.Exists():
+            return dlg
+
+    # 2. 通过类名 #32770（Windows 对话框类）和名称包含 title_base 来匹配
+    root = auto.GetRootControl()
+    all_windows = root.GetChildren()
+    for win in all_windows:
+        # 类名匹配且窗口名称包含 title_base
+        if win.ClassName == "#32770" and title_base.lower() in win.Name.lower():
+            return win
+
+    # 3. 最后兜底：名称包含 title_base 且内部至少有一个按钮的顶层窗口
+    for win in all_windows:
+        if title_base.lower() in win.Name.lower():
+            # 检查该窗口内是否有按钮（即可能是对话框）
+            buttons = get_buttons(win)
+            if buttons:
+                return win
+
+    return None
+
+# ==================== 主函数 ====================
+
 def main(title_base: str, input_content: str, click_btn: str) -> dict:
     """
     主函数：根据标题基础定位对话框，判断类型，输入内容（如果是prompt），并点击指定按钮。
     支持国际化按钮匹配：传入“确定”可匹配“OK”、“Yes”等；传入“取消”可匹配“Cancel”、“No”等。
     """
-    dialog_name = f"{title_base} 显示"
-    print(f"目标窗口标题：{dialog_name}")
-
-    dialog = auto.WindowControl(Name=dialog_name)
-    if not dialog.Exists():
+    # 使用增强的定位函数
+    dialog = find_dialog_window(title_base)
+    if not dialog or not dialog.Exists():
         print("false")
         return {"success": False, "dialog_type": None, "dialog_text": "", "message": "对话框不存在"}
 
@@ -181,11 +216,11 @@ def main(title_base: str, input_content: str, click_btn: str) -> dict:
             "dialog_text": message_text,
             "message": f"未找到匹配的按钮（尝试匹配：{possible_texts}）"
         }
-    
 
+# ==================== 示例调用 ====================
 if __name__ == "__main__":
     # 示例调用，并打印返回的摘要信息
-    result = main("127.0.0.1:5500", "唐清伟", "确定")
+    result = main("127.0.0.1:5501", "唐清伟", "确定")
     print("\n=== 操作结果摘要 ===")
     print(f"成功: {result['success']}")
     print(f"对话框类型: {result['dialog_type']}")
