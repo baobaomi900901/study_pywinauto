@@ -62,16 +62,13 @@ def parse_xpath(xpath_str):
         result.append((control_type_short, attrs, position))
     return result
 
-def find_control_by_steps(steps, timeout=3):
+def find_control_by_steps(steps, timeout=0.5):
     root = auto.GetRootControl()
     current = root
     for idx, (ctrl_type_short, attrs, position) in enumerate(steps):
-        ctrl_class = TYPE_MAP.get(ctrl_type_short)
-        if ctrl_class is None:
-            raise ValueError(f"不支持的控件类型: {ctrl_type_short}")
         start_time = time.time()
         found_control = None
-        matched_controls = []  # 用于调试
+        matched_controls = []
         while time.time() - start_time < timeout:
             children = current.GetChildren()
             matched = []
@@ -98,38 +95,32 @@ def find_control_by_steps(steps, timeout=3):
                 if match:
                     matched.append(child)
             if matched:
-                matched_controls = matched  # 记录以便调试
+                matched_controls = matched
                 if position is not None:
                     if 1 <= position <= len(matched):
                         found_control = matched[position - 1]
                         break
                     else:
-                        # 索引超出，打印警告但继续等待（可能后续会加载）
-                        print(f"警告: 第 {idx+1} 步需要索引 {position}，但只找到 {len(matched)} 个匹配控件，等待重试...")
-                        time.sleep(0.2)
-                        continue
+                        print(f"警告: 第 {idx+1} 步需要索引 {position}，实际找到 {len(matched)} 个，使用第一个匹配项。")
+                        found_control = matched[0]
+                        break
                 else:
                     found_control = matched[0]
                     break
-            time.sleep(0.1)
+            time.sleep(0.02)
         if found_control is None:
-            # 调试信息：打印所有匹配的子控件（即使不符合属性）
-            print(f"\n第 {idx+1} 步未找到控件: {ctrl_type_short} 属性 {attrs} 索引 {position}")
-            print("当前控件的子控件列表（类型、ClassName、Name）：")
-            all_children = current.GetChildren()
-            for i, child in enumerate(all_children):
-                child_type = child.ControlTypeName
-                print(f"  [{i}] {child_type} ClassName='{child.ClassName}' Name='{child.Name}'")
             if matched_controls:
-                print(f"符合属性条件的控件有 {len(matched_controls)} 个，但索引 {position} 无效。")
-                print("尝试使用第一个匹配的控件...")
                 found_control = matched_controls[0]
+                print(f"使用第一个匹配控件继续（第{idx+1}步）")
             else:
+                print(f"第 {idx+1} 步未找到任何匹配控件: {ctrl_type_short} 属性 {attrs}")
                 return None
         current = found_control
     return current
 
 def main():
+    overall_start = time.time()
+
     try:
         with open("el.json", "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -147,18 +138,33 @@ def main():
 
     print(f"使用 XPath: {xpath}")
 
+    parse_start = time.time()
     try:
         steps = parse_xpath(xpath)
+        parse_elapsed = time.time() - parse_start
+        print(f"XPath 解析耗时: {parse_elapsed:.3f} 秒")
         print("解析步骤:", steps)
     except Exception as e:
         print(f"XPath 解析失败: {e}")
         return
 
     print("正在定位控件...")
-    control = find_control_by_steps(steps, timeout=3)
+    locate_start = time.time()
+    control = find_control_by_steps(steps, timeout=0.5)
+    locate_elapsed = time.time() - locate_start
     if control is None:
+        print(f"定位控件耗时: {locate_elapsed:.3f} 秒")
         print("未找到目标控件，请确保目标窗口存在且 XPath 正确。")
         return
+    print(f"定位控件耗时: {locate_elapsed:.3f} 秒")
+
+    top_window = control.GetTopLevelControl()
+    if top_window and hasattr(top_window, 'SetActive'):
+        print("正在激活窗口...")
+        top_window.SetActive()
+        time.sleep(0.05)   # 缩短延迟
+    else:
+        print("无法获取顶层窗口或不支持激活，跳过。")
 
     rect = control.BoundingRectangle
     if not rect or rect.width() <= 0 or rect.height() <= 0:
@@ -166,9 +172,13 @@ def main():
         return
 
     print(f"找到控件，位置: ({rect.left}, {rect.top}, {rect.width()}, {rect.height()})")
+
     highlight = HighlightWindow()
-    time.sleep(0.5)
+    time.sleep(0.2)   # 等待高亮窗口就绪（原0.5秒）
     highlight.update(rect.left, rect.top, rect.width(), rect.height())
+
+    total_elapsed = time.time() - overall_start
+    print(f"总耗时（到高亮显示）: {total_elapsed:.3f} 秒")
     print("已在屏幕上高亮控件，按回车键退出...")
     input()
     highlight.clear()
