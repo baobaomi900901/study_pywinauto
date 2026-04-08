@@ -1,0 +1,31 @@
+{
+  "ControlType": "EditControl",
+  "ClassName": "TEdit",
+  "Name": "",
+  "position": [144, 62, 235, 21],
+  "Value": "UD8B662C84DCBBF7C6C3E924808E45E09",
+  "HelpText": "",
+  "IsPassword": false,
+  "index": 7,
+  "same_type_index": 4,
+  "parent": [
+    {
+      "ControlType": "PaneControl",
+      "ClassName": "#32769",
+      "index": 0,
+      "same_type_index": 0,
+      "is_desktop": true
+    },
+    {
+      "ControlType": "WindowControl",
+      "ClassName": "TMainFrm",
+      "index": 7,
+      "same_type_index": 1,
+      "is_app": true
+    }
+  ],
+  "application": {
+    "pid": 8632,
+    "name": "LiteLicense.exe"
+  }
+}
