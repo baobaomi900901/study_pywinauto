@@ -3,6 +3,7 @@ import uiautomation as auto
 import json
 import time
 from process_utils import get_process_name   # 修改此处：去掉开头的点
+from xpath_generator import generate_xpath
 
 def is_highlight_window(ctrl, current_pid):
     try:
@@ -144,6 +145,19 @@ def get_control_info(control, x, y, current_pid):
         }
         if app_info:
             info["application"] = app_info
+        # ========= 新增：生成 xpath =========
+        # 构建当前控件的字典信息（用于 generate_xpath）
+        current_info = {
+            "ControlType": ctrl_type,
+            "ClassName": control.ClassName or "",
+            "Name": control.Name or "",
+            "index": my_index,
+            "same_type_index": my_same_type_index
+        }
+        # 注意：parent_chain 中已包含所有父级（包括桌面），generate_xpath 内部会过滤掉 is_desktop
+        info["xpath"] = generate_xpath(current_info, parent_chain)
+        # ===================================
+
         return info
     except Exception:
         return None
@@ -160,3 +174,15 @@ def print_control_info(info, last_printed_id, last_print_time, interval=0.1):
         print(f"\n[UI 信息]\n{json.dumps(info, ensure_ascii=False, indent=2)}")
         return ctrl_id, now
     return last_printed_id, last_print_time
+
+
+def write_control_info_to_file(info, filepath="el.json"):
+    """将控件信息写入 JSON 文件（覆盖写入）"""
+    if not info:
+        return
+    try:
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(info, f, ensure_ascii=False, indent=2)
+        print(f"→ 信息已写入 {filepath}")
+    except Exception as e:
+        print(f"→ 写入文件失败: {e}")

@@ -1,0 +1,55 @@
+{
+  "ControlType": "ButtonControl",
+  "ClassName": "",
+  "Name": "选择文件",
+  "position": [
+    294,
+    688,
+    27,
+    26
+  ],
+  "Value": "",
+  "HelpText": "",
+  "IsPassword": false,
+  "index": 0,
+  "same_type_index": 0,
+  "parent": [
+    {
+      "ControlType": "PaneControl",
+      "ClassName": "#32769",
+      "index": 0,
+      "same_type_index": 0,
+      "is_desktop": true
+    },
+    {
+      "ControlType": "WindowControl",
+      "ClassName": "TScpCommanderForm",
+      "index": 4,
+      "same_type_index": 1,
+      "is_app": true
+    },
+    {
+      "ControlType": "PaneControl",
+      "ClassName": "TPanel",
+      "index": 2,
+      "same_type_index": 2
+    },
+    {
+      "ControlType": "PaneControl",
+      "ClassName": "TTBXDock",
+      "index": 1,
+      "same_type_index": 1
+    },
+    {
+      "ControlType": "ToolBarControl",
+      "ClassName": "TTBXToolbar",
+      "index": 0,
+      "same_type_index": 0
+    }
+  ],
+  "application": {
+    "pid": 12240,
+    "name": "WinSCP.exe"
+  },
+  "xpath": "//Window[@ClassName='TScpCommanderForm'][2]/Pane[@ClassName='TPanel'][3]/Pane[@ClassName='TTBXDock'][2]/ToolBar[@ClassName='TTBXToolbar'][1]/Button[@Name='选择文件']"
+}

@@ -4,7 +4,8 @@ import time
 from constants import *
 from highlight import HighlightWindow
 from listeners import KeyboardListener, MouseMoveListener
-from control_info import get_deepest_control, get_control_info, print_control_info
+from control_info import get_deepest_control, get_control_info, print_control_info, write_control_info_to_file
+
 
 class UIProbe:
     def __init__(self):
@@ -36,9 +37,12 @@ class UIProbe:
                 y = rect.top + rect.height() // 2
                 info = get_control_info(control, x, y, self.highlight.get_pid())
                 if info:
+                    # 打印到控制台（带节流）
                     self.last_printed_id, self.last_print_time = print_control_info(
                         info, self.last_printed_id, self.last_print_time, self.print_interval
                     )
+                    # 写入文件（总是写入，不受节流影响）
+                    write_control_info_to_file(info)
                     print("→ 信息已打印")
                 else:
                     print("→ 获取控件信息失败")
