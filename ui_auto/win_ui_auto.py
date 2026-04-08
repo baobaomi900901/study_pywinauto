@@ -12,8 +12,8 @@ import ctypes
 import ctypes.wintypes
 
 # ==================== 配置常量 ====================
-HOVER_DELAY = 0.8          # 你原来是1秒，我调到0.8秒，更舒服一点
-CLEAR_DELAY = 0.05
+HOVER_DELAY = 0.8          # 鼠标悬停多少秒后触发
+CLEAR_DELAY = 0.08         # 清除高亮后的短暂延迟（略微调大，视觉更舒服）
 QUEUE_TIMEOUT = 0.1
 LOOP_SLEEP = 0.05
 NON_INSPECT_SLEEP = 0.1
@@ -23,13 +23,17 @@ DEBUG = False
 PROCESS_QUERY_INFORMATION = 0x0400
 PROCESS_VM_READ = 0x0010
 MAX_PATH = 260
-
 kernel32 = ctypes.windll.kernel32
 psapi = ctypes.windll.psapi
 
 
 def get_process_name(pid):
-    """通过 PID 获取进程名称（exe 文件名）"""
+    """通过 PID 获取进程名称（带缓存）"""
+    if not hasattr(get_process_name, "cache"):
+        get_process_name.cache = {}
+    if pid in get_process_name.cache:
+        return get_process_name.cache[pid]
+
     try:
         handle = kernel32.OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, False, pid)
         if not handle:
@@ -38,11 +42,15 @@ def get_process_name(pid):
             name_buffer = ctypes.create_unicode_buffer(MAX_PATH)
             size = ctypes.c_uint(MAX_PATH)
             if psapi.GetModuleBaseNameW(handle, None, name_buffer, size):
-                return name_buffer.value
-            if psapi.GetProcessImageFileNameW(handle, name_buffer, size):
+                name = name_buffer.value
+            elif psapi.GetProcessImageFileNameW(handle, name_buffer, size):
                 full_path = name_buffer.value
-                return full_path.split('\\')[-1] if '\\' in full_path else full_path
-            return None
+                name = full_path.split('\\')[-1] if '\\' in full_path else full_path
+            else:
+                name = None
+            if name:
+                get_process_name.cache[pid] = name
+            return name
         finally:
             kernel32.CloseHandle(handle)
     except Exception:
@@ -65,6 +73,8 @@ class UIExplorer:
         self.highlight_root = None
         self.highlight_canvas = None
         self.highlight_rect = None
+
+        # 新增：进程名缓存已在 get_process_name 中实现
 
     # ------------------- 高亮窗口线程 -------------------
     def _tkinter_worker(self):
@@ -144,15 +154,12 @@ class UIExplorer:
             return False
 
     def _is_same_control(self, ctrl1, ctrl2):
-        """更可靠地判断两个控件是否为同一个 UI 元素"""
+        """更可靠地判断两个控件是否为同一个"""
         if ctrl1 is None or ctrl2 is None:
             return False
         try:
-            # 优先使用 AutomationId
             if ctrl1.AutomationId and ctrl2.AutomationId:
-                if ctrl1.AutomationId == ctrl2.AutomationId:
-                    return True
-            # 备用：ControlType + ClassName + Name + 位置大小
+                return ctrl1.AutomationId == ctrl2.AutomationId
             if (ctrl1.ControlTypeName == ctrl2.ControlTypeName and
                 ctrl1.ClassName == ctrl2.ClassName and
                 ctrl1.Name == ctrl2.Name):
@@ -166,40 +173,34 @@ class UIExplorer:
             return ctrl1 == ctrl2
 
     def _get_deepest_control(self, x, y):
-        """你原来的实现（使用 deque + 面积排序），保留不动"""
+        """优化版：迭代向下查找最深层控件（性能大幅提升）"""
         try:
-            root = auto.ControlFromPoint(x, y)
-            if not root:
-                return None
-            if self._is_highlight_window(root):
+            ctrl = auto.ControlFromPoint(x, y)
+            if not ctrl or self._is_highlight_window(ctrl):
                 return None
 
-            queue = deque([root])
-            candidates = []
-            while queue:
-                ctrl = queue.popleft()
-                if self._is_highlight_window(ctrl):
-                    continue
-                rect = ctrl.BoundingRectangle
-                if rect and rect.left <= x <= rect.right and rect.top <= y <= rect.bottom:
-                    candidates.append(ctrl)
-                for child in ctrl.GetChildren():
-                    queue.append(child)
-
-            if not candidates:
-                return None
-
-            # 按面积从小到大排序，取最小面积的（最精确的控件）
-            candidates.sort(key=lambda c: (c.BoundingRectangle.width() * c.BoundingRectangle.height()
-                                           if c.BoundingRectangle else float('inf')))
-            return candidates[0]
+            # 不断向下查找更深层的子控件，直到找不到为止
+            while True:
+                children = ctrl.GetChildren()
+                found_deeper = False
+                for child in children:
+                    if self._is_highlight_window(child):
+                        continue
+                    rect = child.BoundingRectangle
+                    if rect and rect.left <= x <= rect.right and rect.top <= y <= rect.bottom:
+                        ctrl = child
+                        found_deeper = True
+                        break
+                if not found_deeper:
+                    break
+            return ctrl
         except Exception as e:
             if DEBUG:
                 print(f"[DEBUG] _get_deepest_control 异常: {e}")
             return None
 
     def _get_control_info(self, control, x, y):
-        """提取控件详细信息，同时返回 index 和 same_type_index"""
+        """提取控件详细信息（保持原功能，结构不变）"""
         try:
             rect = control.BoundingRectangle
             if not rect:
@@ -212,12 +213,10 @@ class UIExplorer:
                 value = value_pattern.Value if value_pattern else ""
             except:
                 value = ""
-
             try:
                 help_text = control.HelpText or ""
             except:
                 help_text = ""
-
             try:
                 is_password = control.IsPassword if hasattr(control, 'IsPassword') else False
             except:
@@ -274,17 +273,15 @@ class UIExplorer:
                     "index": node_index,
                     "same_type_index": node_same_type_index
                 }
-                if (node_type == "PaneControl" and node.ClassName == "#32769"):
+                if node_type == "PaneControl" and node.ClassName == "#32769":
                     node_info["is_desktop"] = True
                 if node_type == "WindowControl" and app_info is None:
                     node_info["is_app"] = True
                     pid = node.ProcessId
                     if pid:
                         process_name = get_process_name(pid)
-                        app_info = {
-                            "pid": pid,
-                            "name": process_name or "未知"
-                        }
+                        app_info = {"pid": pid, "name": process_name or "未知"}
+
                 parent_chain.insert(0, node_info)
                 node = node.GetParentControl()
 
@@ -312,9 +309,12 @@ class UIExplorer:
     def _print_control_info(self, info):
         if not info:
             return
+        # 坐标四舍五入到 5 像素，减少轻微抖动导致的重复打印
+        pos = info["position"]
         ctrl_id = (info["ControlType"], info["ClassName"], info["Name"],
                    info.get("index"), info.get("same_type_index"),
-                   info["position"][0], info["position"][1])
+                   round(pos[0] / 5) * 5, round(pos[1] / 5) * 5)
+
         now = time.time()
         if ctrl_id != self.last_printed_control_id or now - self.last_print_time > self.print_interval:
             print(f"\n[UI 信息]\n{json.dumps(info, ensure_ascii=False, indent=2)}")
@@ -327,12 +327,14 @@ class UIExplorer:
         try:
             with auto.UIAutomationInitializerInThread():
                 print("[UI探测] COM初始化成功")
-                last_move_time = 0
                 pending_coord = None
+                last_move_time = 0
+
                 while not self.stop_event.is_set():
                     with self.coord_lock:
                         coord = self.latest_coord
                         self.latest_coord = None
+
                     if coord is not None:
                         pending_coord = coord
                         last_move_time = time.time()
@@ -349,10 +351,12 @@ class UIExplorer:
                     if (pending_coord is not None and
                             (now - last_move_time) >= HOVER_DELAY and
                             pending_coord != self.last_processed_coord):
+
                         x, y = pending_coord
                         try:
                             self.clear_highlight()
                             time.sleep(CLEAR_DELAY)
+
                             control = self._get_deepest_control(x, y)
                             if control:
                                 rect = control.BoundingRectangle
@@ -360,9 +364,11 @@ class UIExplorer:
                                     self.update_highlight(rect.left, rect.top, rect.width(), rect.height())
                                 else:
                                     self.clear_highlight()
+
                                 info = self._get_control_info(control, x, y)
                                 if info:
                                     self._print_control_info(info)
+
                                 self.last_processed_coord = pending_coord
                             else:
                                 self.clear_highlight()
@@ -372,6 +378,7 @@ class UIExplorer:
                                 print(f"[DEBUG] UI探测处理异常: {e}")
                             pending_coord = None
                             self.last_processed_coord = None
+
                     time.sleep(LOOP_SLEEP)
         except Exception as e:
             print(f"[UI探测] 初始化失败: {e}")
@@ -380,9 +387,10 @@ class UIExplorer:
 
     # ------------------- 主程序入口 -------------------
     def run(self):
-        print("UI 自动探查器已启动")
+        print("UI 自动探查器已启动（优化版）")
         print(f"命令: 1 - 开启探查模式, 2 - 关闭探查模式, clear - 清除高亮, wq - 退出程序")
         print(f"提示: 鼠标在控件上停留 {HOVER_DELAY} 秒后，会高亮显示该控件并打印信息")
+
         self.start_highlight_service()
         uia_thread = threading.Thread(target=self._uia_worker, daemon=True)
         uia_thread.start()

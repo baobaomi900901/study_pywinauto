@@ -1,12 +1,11 @@
 # get_ui_tree.py
-# 通过进程 PID 生成 UIAutomation 控件树 XML 文件
-#
-# 依赖: pip install uiautomation lxml
+# 通过进程 PID 生成 UIAutomation 控件树 XML 文件（优化版 + 自定义输出路径）
 
 from __future__ import annotations
-
 import sys
 import time
+import argparse
+import os
 from typing import Optional
 
 try:
@@ -19,206 +18,225 @@ try:
 except ImportError:
     etree = None
 
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. 控件树序列化
 # ══════════════════════════════════════════════════════════════════════════════
-
-def build_tree(control, parent=None, *, max_depth: int = 32, _depth: int = 0):
-    """
-    将 UIAutomation 控件树序列化为 lxml ElementTree。
-    """
+def build_tree(
+    control,
+    parent: Optional[etree.Element] = None,
+    *,
+    max_depth: int = 18,
+    _depth: int = 0,
+    start_time: float = 0.0,
+    timeout: float = 15.0,
+    node_count: list[int],
+) -> Optional[etree.Element]:
+    """将 UIAutomation 控件递归序列化为 lxml ElementTree（带超时和异常保护）"""
     if _depth > max_depth:
+        return None
+    if time.time() - start_time > timeout:
+        print(f"[build_tree] 警告：构建超时（已达 {timeout} 秒），停止继续递归")
         return None
 
     tag = (control.ControlTypeName or "Unknown").replace(" ", "")
 
-    rect = control.BoundingRectangle
+    try:
+        rect = control.BoundingRectangle
+        x, y, w, h = rect.left, rect.top, rect.width(), rect.height()
+    except Exception:
+        x = y = w = h = 0
 
     attrs = {
-        "Name":         control.Name or "",
+        "Name": control.Name or "",
         "AutomationId": control.AutomationId or "",
-        "ClassName":    control.ClassName or "",
-        "ControlType":  control.ControlTypeName or "",
-        "IsEnabled":    str(control.IsEnabled),
-        "IsOffscreen":  str(control.IsOffscreen),
-        "x":            str(rect.left),
-        "y":            str(rect.top),
-        "width":        str(rect.width()),
-        "height":       str(rect.height()),
+        "ClassName": control.ClassName or "",
+        "ControlType": control.ControlTypeName or "",
+        "IsEnabled": str(control.IsEnabled),
+        "IsOffscreen": str(control.IsOffscreen),
+        "x": str(x),
+        "y": str(y),
+        "width": str(w),
+        "height": str(h),
     }
 
-    elem = (
-        etree.SubElement(parent, tag, attrs)
-        if parent is not None
-        else etree.Element(tag, attrs)
-    )
+    elem = etree.SubElement(parent, tag, attrs) if parent is not None else etree.Element(tag, attrs)
+    node_count[0] += 1
 
     for child in control.GetChildren():
-        build_tree(child, elem, max_depth=max_depth, _depth=_depth + 1)
-
+        build_tree(
+            child, elem,
+            max_depth=max_depth,
+            _depth=_depth + 1,
+            start_time=start_time,
+            timeout=timeout,
+            node_count=node_count,
+        )
     return elem
 
 
-def dump_xml(control, path: str = "ui_tree.xml", *, pretty: bool = True):
-    """将控件树保存为 XML 文件"""
-    if etree is None:
-        print("错误：未安装 lxml 库")
+# ══════════════════════════════════════════════════════════════════════════════
+# 2. 通过 PID 查找窗口
+# ══════════════════════════════════════════════════════════════════════════════
+def find_window_by_pid(pid: int, window_name: Optional[str] = None, timeout: float = 5.0):
+    """高效查找目标窗口"""
+    if auto is None:
         return None
 
-    root = build_tree(control)
-    if root is None:
-        print("build_tree 返回为空")
-        return None
+    root = auto.GetRootControl()
 
-    tree = etree.ElementTree(root)
-    with open(path, "wb") as f:
-        tree.write(f, pretty_print=pretty, xml_declaration=True, encoding="utf-8")
+    # 优先使用 searchDepth=1
+    try:
+        window = auto.WindowControl(searchDepth=1, ProcessId=pid)
+        if window.Exists(maxSearchSeconds=2):
+            name = window.Name or ""
+            if window_name is None or window_name in name:
+                print(f"[find_window] ✓ 使用 searchDepth=1 找到窗口: \"{name}\" (PID={pid})")
+                return window
+    except Exception:
+        pass
 
-    print(f"[dump_xml] 控件树已写入: {path}")
-    return root
+    # 兜底搜索顶级窗口
+    condition = auto.Condition.create(ProcessId=pid)
+    top_windows = root.FindAll(auto.TreeScope.Children, condition)
+
+    for win in top_windows:
+        if win.ControlType == auto.ControlType.WindowControl and not win.IsOffscreen:
+            name = win.Name or ""
+            if window_name is None or window_name in name:
+                print(f"[find_window] ✓ 在顶级窗口中找到: \"{name}\" (PID={pid})")
+                return win
+
+    print(f"[find_window] 错误：未找到 PID={pid} 对应的窗口")
+    return None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 2. 通过 PID 生成 UI 树 XML（核心功能）
+# 3. 生成 XML（核心函数，已修改默认路径）
 # ══════════════════════════════════════════════════════════════════════════════
-
 def dump_xml_by_pid(
     pid: int,
     path: Optional[str] = None,
     *,
-    max_depth: int = 200,
+    max_depth: int = 18,
     pretty: bool = True,
-    window_name: Optional[str] = None
+    window_name: Optional[str] = None,
+    timeout: float = 15.0,
 ) -> Optional[etree.Element]:
-    """
-    通过进程 PID 生成该应用的 UI 控件树 XML 文件
-
-    参数:
-        pid          : 目标进程的 PID（必填）
-        path         : 输出 XML 文件路径，默认为 ui_tree_{pid}.xml
-        max_depth    : 控件树最大递归深度（防止卡死）
-        pretty       : 是否格式化 XML 输出
-        window_name  : 可选，指定窗口名称过滤（当一个进程有多个窗口时使用）
-
-    返回:
-        lxml Element 根节点（成功时），失败返回 None
-    """
-    if auto is None:
-        print("错误：未安装 uiautomation 库，请执行: pip install uiautomation")
-        return None
-    if etree is None:
-        print("错误：未安装 lxml 库，请执行: pip install lxml")
+    """通过 PID 生成 UI 控件树 XML"""
+    if auto is None or etree is None:
+        print("错误：请先安装依赖：pip install uiautomation lxml")
         return None
 
+    # ==================== 修改默认路径的核心逻辑 ====================
     if path is None:
-        path = f"ui_tree_{pid}.xml"
+        # 默认保存到 .\ui_tree\ 目录下
+        output_dir = os.path.join(os.getcwd(), "ui_tree")
+        os.makedirs(output_dir, exist_ok=True)          # 自动创建文件夹
+        path = os.path.join(output_dir, f"ui_tree_{pid}.xml")
+    # ============================================================
 
+    # 检查进程是否存在（可选）
+    if psutil is not None:
+        try:
+            if not psutil.pid_exists(pid):
+                print(f"[警告] PID={pid} 的进程不存在或已退出")
+        except Exception:
+            pass
+
+    print(f"[dump_xml_by_pid] 正在查找 PID = {pid} 的窗口...")
+    target_window = find_window_by_pid(pid, window_name)
+
+    if target_window is None:
+        return None
+
+    print(f"[dump_xml_by_pid] 开始构建控件树 (max_depth={max_depth}, timeout={timeout}s)...")
+    start_time = time.time()
+    node_count = [0]
+
+    root_elem = build_tree(
+        target_window,
+        max_depth=max_depth,
+        start_time=start_time,
+        timeout=timeout,
+        node_count=node_count,
+    )
+
+    if root_elem is None:
+        print("[dump_xml_by_pid] build_tree 失败或超时")
+        return None
+
+    total_nodes = node_count[0]
+    use_pretty = pretty and total_nodes <= 2000
+    if pretty and total_nodes > 2000:
+        print(f"[提示] 控件数量较多 ({total_nodes})，自动关闭 pretty_print")
+
+    # 保存 XML（已修复编码问题）
+    tree = etree.ElementTree(root_elem)
     try:
-        print(f"[dump_xml_by_pid] 正在查找 PID = {pid} 的窗口...")
-
-        root_control = auto.GetRootControl()
-
-        # 第一步：尝试在顶级窗口中查找
-        target_window = None
-        for child in root_control.GetChildren():
-            if child.ProcessId == pid:
-                if window_name is None or window_name in child.Name:
-                    target_window = child
-                    break
-
-        # 第二步：如果没找到，尝试全局搜索（更彻底）
-        if target_window is None:
-            print(f"[dump_xml_by_pid] 顶级窗口未找到，尝试全局搜索 PID={pid}...")
-            condition = auto.Condition.create(ProcessId=pid)
-            all_controls = root_control.FindAll(auto.TreeScope.Descendants, condition)
-
-            for ctrl in all_controls:
-                if ctrl.ControlType == auto.ControlType.WindowControl and not ctrl.IsOffscreen:
-                    if window_name is None or window_name in ctrl.Name:
-                        target_window = ctrl
-                        break
-
-            # 仍未找到则取第一个匹配的控件作为兜底
-            if target_window is None and all_controls:
-                target_window = all_controls[0]
-
-        if target_window is None:
-            print(f"[dump_xml_by_pid] 错误：未找到 PID={pid} 对应的窗口")
-            return None
-
-        print(f"[dump_xml_by_pid] ✓ 找到窗口: \"{target_window.Name}\" (PID={pid})")
-
-        # 生成控件树并保存为 XML
-        root_elem = build_tree(target_window, max_depth=max_depth)
-        if root_elem is None:
-            print("[dump_xml_by_pid] build_tree 失败")
-            return None
-
-        tree = etree.ElementTree(root_elem)
         with open(path, "wb") as f:
-            tree.write(f, pretty_print=pretty, xml_declaration=True, encoding="utf-8")
+            tree.write(
+                f,
+                pretty_print=use_pretty,
+                xml_declaration=True,
+                encoding="utf-8"
+            )
 
-        # 统计控件数量
-        total_nodes = len(list(root_elem.iter()))
-
+        elapsed = time.time() - start_time
         print(f"[dump_xml_by_pid] ✓ 成功生成 XML 文件！")
         print(f"                  文件路径: {path}")
         print(f"                  窗口名称: {target_window.Name}")
         print(f"                  控件总数: {total_nodes}")
-        print(f"                  最大深度: {max_depth}")
-
+        print(f"                  耗时: {elapsed:.2f} 秒")
         return root_elem
-
     except Exception as e:
-        print(f"[dump_xml_by_pid] 生成 XML 时发生异常 (PID={pid}): {e}")
+        print(f"[dump_xml_by_pid] 保存 XML 失败: {e}")
         import traceback
         traceback.print_exc()
         return None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 示例使用
+# 4. 命令行入口
 # ══════════════════════════════════════════════════════════════════════════════
-
-if __name__ == "__main__":
-    import sys
-
+def main():
     if auto is None or etree is None:
-        print("请先安装依赖：")
-        print("   pip install uiautomation lxml")
+        print("请先安装依赖：pip install uiautomation lxml")
         sys.exit(1)
 
-    # 从命令行参数获取 PID
-    if len(sys.argv) < 2:
-        print("用法: python get_ui_tree.py <PID> [--window-name <名称片段>] [--output <文件路径>]")
-        print("示例: python get_ui_tree.py 8632")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="通过进程 PID 生成 UIAutomation 控件树 XML 文件",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument("pid", type=int, help="目标进程的 PID")
+    parser.add_argument("-o", "--output", type=str, help="自定义输出 XML 文件完整路径")
+    parser.add_argument("-w", "--window-name", type=str, help="窗口名称过滤")
+    parser.add_argument("-d", "--max-depth", type=int, default=18, help="最大递归深度")
+    parser.add_argument("-t", "--timeout", type=float, default=15.0, help="构建超时时间（秒）")
+    parser.add_argument("--no-pretty", action="store_true", help="禁用 XML 美化")
 
-    try:
-        target_pid = int(sys.argv[1])
-    except ValueError:
-        print(f"错误：PID 必须是整数，收到 '{sys.argv[1]}'")
-        sys.exit(1)
+    args = parser.parse_args()
 
-    # 可选参数解析（简单实现）
-    window_name = None
-    output_path = None
-    for i in range(2, len(sys.argv)):
-        if sys.argv[i] == "--window-name" and i + 1 < len(sys.argv):
-            window_name = sys.argv[i + 1]
-        elif sys.argv[i] == "--output" and i + 1 < len(sys.argv):
-            output_path = sys.argv[i + 1]
-
-    print("=" * 60)
+    print("=" * 70)
     print("开始通过 PID 生成 UI 控件树 XML")
-    print("=" * 60)
+    print("=" * 70)
 
     dump_xml_by_pid(
-        pid=target_pid,
-        path=output_path,          # 若为 None 则自动生成 ui_tree_{pid}.xml
-        max_depth=20,
-        window_name=window_name
+        pid=args.pid,
+        path=args.output,
+        max_depth=args.max_depth,
+        pretty=not args.no_pretty,
+        window_name=args.window_name,
+        timeout=args.timeout,
     )
 
     print("\n操作完成！")
+
+
+if __name__ == "__main__":
+    main()
