@@ -3,8 +3,8 @@
   "ClassName": "",
   "Name": "选择文件",
   "position": [
-    294,
-    688,
+    593,
+    238,
     27,
     26
   ],
@@ -24,14 +24,14 @@
     {
       "ControlType": "WindowControl",
       "ClassName": "TScpCommanderForm",
-      "index": 4,
-      "same_type_index": 1,
+      "index": 2,
+      "same_type_index": 0,
       "is_app": true
     },
     {
       "ControlType": "PaneControl",
       "ClassName": "TPanel",
-      "index": 2,
+      "index": 3,
       "same_type_index": 2
     },
     {
@@ -47,9 +47,10 @@
       "same_type_index": 0
     }
   ],
+  "automation_type": "UIA",
+  "xpath": "//Window[@ClassName='TScpCommanderForm'][1]/Pane[@ClassName='TPanel'][3]/Pane[@ClassName='TTBXDock'][2]/ToolBar[@ClassName='TTBXToolbar'][1]/Button[@Name='选择文件']",
   "application": {
-    "pid": 12240,
+    "pid": 2976,
     "name": "WinSCP.exe"
-  },
-  "xpath": "//Window[@ClassName='TScpCommanderForm'][2]/Pane[@ClassName='TPanel'][3]/Pane[@ClassName='TTBXDock'][2]/ToolBar[@ClassName='TTBXToolbar'][1]/Button[@Name='选择文件']"
+  }
 }

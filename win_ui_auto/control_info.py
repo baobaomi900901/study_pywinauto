@@ -1,8 +1,7 @@
-# control_info.py
 import uiautomation as auto
 import json
 import time
-from process_utils import get_process_name   # 修改此处：去掉开头的点
+from process_utils import get_process_name
 from xpath_generator import generate_xpath
 
 def is_highlight_window(ctrl, current_pid):
@@ -49,6 +48,83 @@ def get_deepest_control(x, y, current_pid):
         return ctrl
     except Exception:
         return None
+
+def detect_automation_type(control):
+    """
+    检测控件使用的自动化技术类型
+    返回: 'UIA', 'MSAA', 或 'WND'
+    """
+    try:
+        # 1. 尝试获取 LegacyIAccessiblePattern (MSAA 桥接)
+        has_legacy = False
+        try:
+            legacy = control.GetLegacyIAccessiblePattern()
+            has_legacy = legacy is not None
+        except:
+            has_legacy = False
+
+        # 2. 尝试获取一些 UIA 特有的模式
+        uia_patterns = []
+        try:
+            if control.GetValuePattern():
+                uia_patterns.append('Value')
+        except:
+            pass
+        try:
+            if control.GetGridPattern():
+                uia_patterns.append('Grid')
+        except:
+            pass
+        try:
+            if control.GetTablePattern():
+                uia_patterns.append('Table')
+        except:
+            pass
+        try:
+            if control.GetInvokePattern():
+                uia_patterns.append('Invoke')
+        except:
+            pass
+
+        has_uia_patterns = len(uia_patterns) > 0
+
+        # 3. 决策
+        if has_uia_patterns and not has_legacy:
+            return "UIA"
+        elif has_legacy and not has_uia_patterns:
+            return "MSAA"
+        elif has_legacy and has_uia_patterns:
+            # 同时拥有，通常优先认为是 UIA
+            try:
+                class_name = control.ClassName
+                if class_name and class_name.startswith("WindowsForms10."):
+                    return "UIA"
+                if class_name and ("HwndWrapper" in class_name or "HwndHost" in class_name):
+                    return "UIA"
+            except:
+                pass
+            return "UIA"
+        else:
+            # 没有任何模式，尝试通过窗口类名启发
+            try:
+                hwnd = control.NativeWindowHandle
+                if hwnd:
+                    import ctypes
+                    user32 = ctypes.windll.user32
+                    buf = ctypes.create_unicode_buffer(256)
+                    user32.GetClassNameW(hwnd, buf, 256)
+                    class_name = buf.value
+                    if class_name in ["Button", "Edit", "Static", "ListBox", "ComboBox", 
+                                      "#32770", "Notepad", "CalcFrame"]:
+                        return "MSAA"
+                    else:
+                        return "WND"
+                else:
+                    return "WND"
+            except:
+                return "WND"
+    except Exception:
+        return "WND"
 
 def get_control_info(control, x, y, current_pid):
     try:
@@ -131,6 +207,16 @@ def get_control_info(control, x, y, current_pid):
             parent_chain.insert(0, node_info)
             node = node.GetParentControl()
 
+        # 生成当前控件的字典（用于xpath生成）
+        current_info = {
+            "ControlType": ctrl_type,
+            "ClassName": control.ClassName or "",
+            "Name": control.Name or "",
+            "index": my_index,
+            "same_type_index": my_same_type_index
+        }
+        xpath_str = generate_xpath(current_info, parent_chain)
+
         info = {
             "ControlType": ctrl_type,
             "ClassName": control.ClassName or "",
@@ -141,23 +227,12 @@ def get_control_info(control, x, y, current_pid):
             "IsPassword": is_password,
             "index": my_index,
             "same_type_index": my_same_type_index,
-            "parent": parent_chain
+            "parent": parent_chain,
+            "automation_type": detect_automation_type(control),
+            "xpath": xpath_str
         }
         if app_info:
             info["application"] = app_info
-        # ========= 新增：生成 xpath =========
-        # 构建当前控件的字典信息（用于 generate_xpath）
-        current_info = {
-            "ControlType": ctrl_type,
-            "ClassName": control.ClassName or "",
-            "Name": control.Name or "",
-            "index": my_index,
-            "same_type_index": my_same_type_index
-        }
-        # 注意：parent_chain 中已包含所有父级（包括桌面），generate_xpath 内部会过滤掉 is_desktop
-        info["xpath"] = generate_xpath(current_info, parent_chain)
-        # ===================================
-
         return info
     except Exception:
         return None
@@ -174,7 +249,6 @@ def print_control_info(info, last_printed_id, last_print_time, interval=0.1):
         print(f"\n[UI 信息]\n{json.dumps(info, ensure_ascii=False, indent=2)}")
         return ctrl_id, now
     return last_printed_id, last_print_time
-
 
 def write_control_info_to_file(info, filepath="el.json"):
     """将控件信息写入 JSON 文件（覆盖写入）"""
