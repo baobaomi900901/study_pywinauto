@@ -13,6 +13,9 @@
 
 ```
 win_ui_auto/
+├── hooks/
+  ├── get_text.py # 文本查找
+  └── set_act.py # 找到元素进行动作
 ├── main.py # 程序入口，解析命令行/交互命令
 ├── constants.py # 配置常量（HOVER_DELAY, CLEAR_DELAY 等）
 ├── highlight.py # 高亮窗口（Tkinter 实现）

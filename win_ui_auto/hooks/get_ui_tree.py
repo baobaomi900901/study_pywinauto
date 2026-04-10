@@ -1,4 +1,4 @@
-# get_ui_tree.py
+# win_ui_auto/hooks/get_ui_tree.py
 # 通过进程 PID 生成 UIAutomation 控件树 XML 文件（优化版 + 自定义输出路径）
 
 from __future__ import annotations

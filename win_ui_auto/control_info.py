@@ -1,4 +1,4 @@
-# control_info.py
+# win_ui_auto/control_info.py
 import uiautomation as auto
 import json
 import time

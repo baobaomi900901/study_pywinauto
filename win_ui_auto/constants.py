@@ -1,4 +1,4 @@
-# constants.py
+# win_ui_auto/constants.py
 HOVER_DELAY = 0.8          # 悬停延迟（秒）
 CLEAR_DELAY = 0.05         # 清除高亮后的短暂延迟
 QUEUE_TIMEOUT = 0.1        # 队列超时

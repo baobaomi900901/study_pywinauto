@@ -1,4 +1,4 @@
-# probe.py
+# win_ui_auto/probe.py
 import threading
 import time
 from constants import *

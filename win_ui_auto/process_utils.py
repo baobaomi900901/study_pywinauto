@@ -1,4 +1,4 @@
-# process_utils.py
+# win_ui_auto/process_utils.py
 import ctypes
 import ctypes.wintypes
 

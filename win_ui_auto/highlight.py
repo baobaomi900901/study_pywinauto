@@ -1,4 +1,4 @@
-# highlight.py
+# win_ui_auto/highlight.py
 import threading
 import queue
 import tkinter as tk

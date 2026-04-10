@@ -1,4 +1,4 @@
-# xpath_generator.py
+# win_ui_auto/xpath_generator.py
 USE_SHORT_XPATH = True   # 设置为 False 可恢复原长名称
 
 def generate_xpath(control_info, parent_chain):

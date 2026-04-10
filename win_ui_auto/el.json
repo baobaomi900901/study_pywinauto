@@ -1,17 +1,17 @@
 {
-  "ControlType": "ButtonControl",
-  "ClassName": "",
-  "Name": "选择文件",
+  "ControlType": "PaneControl",
+  "ClassName": "TGroupBox",
+  "Name": "",
   "position": [
-    593,
-    238,
-    27,
-    26
+    131,
+    521,
+    444,
+    81
   ],
   "Value": "",
   "HelpText": "",
   "IsPassword": false,
-  "index": 0,
+  "index": 3,
   "same_type_index": 0,
   "parent": [
     {
@@ -24,31 +24,19 @@
     {
       "ControlType": "WindowControl",
       "ClassName": "TScpCommanderForm",
-      "index": 2,
+      "index": 3,
+      "same_type_index": 0
+    },
+    {
+      "ControlType": "WindowControl",
+      "ClassName": "TSelectMaskDialog",
+      "index": 0,
       "same_type_index": 0,
       "is_app": true
-    },
-    {
-      "ControlType": "PaneControl",
-      "ClassName": "TPanel",
-      "index": 3,
-      "same_type_index": 2
-    },
-    {
-      "ControlType": "PaneControl",
-      "ClassName": "TTBXDock",
-      "index": 1,
-      "same_type_index": 1
-    },
-    {
-      "ControlType": "ToolBarControl",
-      "ClassName": "TTBXToolbar",
-      "index": 0,
-      "same_type_index": 0
     }
   ],
-  "automation_type": "UIA",
-  "xpath": "//Window[@ClassName='TScpCommanderForm'][1]/Pane[@ClassName='TPanel'][3]/Pane[@ClassName='TTBXDock'][2]/ToolBar[@ClassName='TTBXToolbar'][1]/Button[@Name='选择文件']",
+  "automation_type": "MSAA",
+  "xpath": "//Window[@ClassName='TScpCommanderForm'][1]/Window[@ClassName='TSelectMaskDialog'][1]/Pane[@ClassName='TGroupBox'][1]",
   "application": {
     "pid": 2976,
     "name": "WinSCP.exe"
