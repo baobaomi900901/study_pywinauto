@@ -1,3 +1,15 @@
+# nuitka-project: --standalone
+# nuitka-project: --onefile
+# nuitka-project: --remove-output
+# nuitka-project: --no-pyi-file
+# nuitka-project: --output-dir=build
+# nuitka-project: --output-filename=win-auto
+# nuitka-project: --file-version=0.0.0
+# nuitka-project: --product-version=0.0.0
+# nuitka-project: --product-name=win-auto
+# nuitka-project: --company-name=K-RPA Lite Team
+# nuitka-project: --file-description=win-auto
+
 import argparse
 import sys
 import os

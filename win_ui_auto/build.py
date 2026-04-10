@@ -11,13 +11,13 @@ def build_exe(name, version: str):
     print(f"打包信息: name={name}, version={version}")
 
     cmd = [
-        "python", "-m",
+        "uv", "run", "python", "-m",
         "nuitka",
-        # "--mingw64",
+        "--mingw64",
         f"--product-name={name}",
         f"--file-version={version}",
         f"--product-version={version}",
-        "find_text.py"
+        "main.py"
     ]
 
     subprocess.run(cmd, check=True)
@@ -25,7 +25,7 @@ def build_exe(name, version: str):
     print(f"🎉 Nuitka 打包完成")
 
 def main():
-    build_exe('bbm', '1.0.0.0')
+    build_exe('win-auto', '1.0.0.0')
 
 
 if __name__ == "__main__":
