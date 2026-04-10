@@ -5,3 +5,4 @@ ui_tree/
 
 "//Window[@ClassName='Window'][2]/Window[@ClassName='Window'][1]/Custom[@ClassName='BlockSettingsView'][1]/Button[@Name='取消']"
 "//Window[@ClassName='Window'][2]/Window[@ClassName='Window'][1]/Custom[@ClassName='BlockSettingsView'][1]/Button[@Name='取 消']"
+win_ui_auto/@AutomationLog.txt
