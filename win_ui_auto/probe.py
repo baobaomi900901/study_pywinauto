@@ -1,6 +1,7 @@
-# win_ui_auto/probe.py
 import threading
 import time
+import ctypes
+from ctypes import wintypes
 from constants import *
 from highlight import HighlightWindow
 from listeners import KeyboardListener, MouseMoveListener
@@ -24,6 +25,52 @@ class UIProbe:
         self.keyboard = KeyboardListener(on_f8=self._on_f8)
         self.mouse_move = MouseMoveListener(on_move=self._on_mouse_move)
 
+    def _wake_up_com_interface(self, x, y):
+        """【绝杀2】：强取 COM 接口，精准穿透透明防弹玻璃"""
+        user32 = ctypes.windll.user32
+
+        user32.WindowFromPoint.argtypes = [wintypes.POINT]
+        user32.WindowFromPoint.restype = wintypes.HWND
+        user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
+        user32.GetAncestor.restype = wintypes.HWND
+
+        pt = wintypes.POINT(x, y)
+        hwnd = user32.WindowFromPoint(pt)
+        if not hwnd:
+            return
+
+        root_hwnd = user32.GetAncestor(hwnd, 2)
+        if not root_hwnd:
+            root_hwnd = hwnd
+
+        target_hwnds = [hwnd, root_hwnd]
+
+        def enum_child_proc(h, lParam):
+            buf = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(h, buf, 256)
+            if buf.value == "Chrome_RenderWidgetHostHWND":
+                target_hwnds.append(h)
+            return True
+
+        EnumChildProcType = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+        user32.EnumChildWindows(root_hwnd, EnumChildProcType(enum_child_proc), 0)
+
+        try:
+            oleacc = ctypes.windll.oleacc
+
+            class GUID(ctypes.Structure):
+                _fields_ = [("Data1", ctypes.c_ulong), ("Data2", ctypes.c_ushort), ("Data3", ctypes.c_ushort), ("Data4", ctypes.c_ubyte * 8)]
+
+            IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf, (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
+            OBJID_CLIENT = -4
+
+            for t_hwnd in set(target_hwnds):
+                pacc = ctypes.c_void_p()
+                # 强行索要 IAccessible 对象！
+                oleacc.AccessibleObjectFromWindow(t_hwnd, OBJID_CLIENT, ctypes.byref(IID_IAccessible), ctypes.byref(pacc))
+        except:
+            pass
+
     def _on_f8(self):
         if not self.inspect_mode:
             return
@@ -37,11 +84,9 @@ class UIProbe:
                 y = rect.top + rect.height() // 2
                 info = get_control_info(control, x, y, self.highlight.get_pid())
                 if info:
-                    # 打印到控制台（带节流）
                     self.last_printed_id, self.last_print_time = print_control_info(
                         info, self.last_printed_id, self.last_print_time, self.print_interval
                     )
-                    # 写入文件（总是写入，不受节流影响）
                     write_control_info_to_file(info)
                     print("→ 信息已打印")
                 else:
@@ -77,18 +122,26 @@ class UIProbe:
                             self.highlight.clear()
                             with self.control_lock:
                                 self.current_control = None
-                        time.sleep(NON_INSPECT_SLEEP)
+                        time.sleep(NON_INSPECT_SLEEP)  # type: ignore
                         continue
 
                     now = time.time()
                     if (pending_coord is not None and
-                            (now - last_move_time) >= HOVER_DELAY and
+                            (now - last_move_time) >= HOVER_DELAY and  # type: ignore
                             pending_coord != self.last_processed_coord):
                         x, y = pending_coord
                         try:
                             self.highlight.clear()
-                            time.sleep(CLEAR_DELAY)
+                            time.sleep(CLEAR_DELAY)  # type: ignore
+
+                            # 1. 向鼠标悬停位置强索 COM 接口，保证 UIA 数据鲜活
+                            self._wake_up_com_interface(x, y)
+                            time.sleep(0.2)  # 给予毫秒级的内存对象同步时间
+
+                            # 2. 原生 UIA 寻路机制（系统屏障已在 main.py 中被破除）
                             control = get_deepest_control(x, y, self.highlight.get_pid())
+
+                            # ======== 更新高亮框 ========
                             if control:
                                 rect = control.BoundingRectangle
                                 if rect and rect.width() > 0 and rect.height() > 0:
@@ -101,13 +154,13 @@ class UIProbe:
                                 with self.control_lock:
                                     self.current_control = None
                                 self.last_processed_coord = pending_coord
+
                         except Exception as e:
-                            if DEBUG:
-                                print(f"[DEBUG] UI探测处理异常: {e}")
                             pending_coord = None
                             with self.control_lock:
                                 self.current_control = None
-                    time.sleep(LOOP_SLEEP)
+
+                    time.sleep(LOOP_SLEEP)  # type: ignore
         except Exception as e:
             print(f"[UI探测] 初始化失败: {e}")
         finally:
@@ -120,7 +173,7 @@ class UIProbe:
         print(" • 开启后，鼠标悬停 0.8 秒 → 红色高亮框")
         print(" • 按 F8 键 → 打印当前高亮控件的完整信息（包括父级链）")
 
-        time.sleep(0.5)  # 等待高亮窗口初始化
+        time.sleep(0.5)
 
         self.keyboard.start()
         self.mouse_move.start()
@@ -149,8 +202,6 @@ class UIProbe:
                     with self.control_lock:
                         self.current_control = None
                     print("已清除高亮")
-                else:
-                    print("未知命令")
         except KeyboardInterrupt:
             print("\n用户中断")
         finally:
@@ -159,4 +210,4 @@ class UIProbe:
             self.keyboard.stop()
             self.mouse_move.stop()
             uia_thread.join(2)
-            print("程序已退出")
+            print("探针服务已终止。")

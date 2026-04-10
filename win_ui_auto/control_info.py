@@ -5,11 +5,13 @@ import time
 from process_utils import get_process_name
 from xpath_generator import generate_xpath
 
+
 def is_highlight_window(ctrl, current_pid):
     try:
         return (ctrl.ClassName == "TkChild" and ctrl.ProcessId == current_pid)
     except:
         return False
+
 
 def is_same_control(ctrl1, ctrl2):
     if ctrl1 is None or ctrl2 is None:
@@ -27,6 +29,7 @@ def is_same_control(ctrl1, ctrl2):
         return False
     except:
         return ctrl1 == ctrl2
+
 
 def get_deepest_control(x, y, current_pid):
     try:
@@ -49,6 +52,7 @@ def get_deepest_control(x, y, current_pid):
         return ctrl
     except Exception:
         return None
+
 
 def detect_automation_type(control):
     """
@@ -115,7 +119,7 @@ def detect_automation_type(control):
                     buf = ctypes.create_unicode_buffer(256)
                     user32.GetClassNameW(hwnd, buf, 256)
                     class_name = buf.value
-                    if class_name in ["Button", "Edit", "Static", "ListBox", "ComboBox", 
+                    if class_name in ["Button", "Edit", "Static", "ListBox", "ComboBox",
                                       "#32770", "Notepad", "CalcFrame"]:
                         return "MSAA"
                     else:
@@ -126,6 +130,7 @@ def detect_automation_type(control):
                 return "WND"
     except Exception:
         return "WND"
+
 
 def get_control_info(control, x, y, current_pid):
     try:
@@ -238,6 +243,7 @@ def get_control_info(control, x, y, current_pid):
     except Exception:
         return None
 
+
 def print_control_info(info, last_printed_id, last_print_time, interval=0.1):
     if not info:
         return last_printed_id, last_print_time
@@ -250,6 +256,7 @@ def print_control_info(info, last_printed_id, last_print_time, interval=0.1):
         print(f"\n[UI 信息]\n{json.dumps(info, ensure_ascii=False, indent=2)}")
         return ctrl_id, now
     return last_printed_id, last_print_time
+
 
 def write_control_info_to_file(info, filepath="el.json"):
     """将控件信息写入 JSON 文件（覆盖写入）"""
