@@ -9,6 +9,11 @@
 # nuitka-project: --product-name=win-auto
 # nuitka-project: --company-name=K-RPA Lite Team
 # nuitka-project: --file-description=win-auto
+# nuitka-project: --include-package=uiautomation
+# nuitka-project: --include-module=comtypes.stream
+# nuitka-project: --include-module=csv
+# nuitka-project: --include-module=email
+# nuitka-project: --enable-plugin=tk-inter
 
 import argparse
 import sys
