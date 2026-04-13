@@ -78,20 +78,18 @@ def main():
 
     # 1. 功能选择标志
     group = parser.add_mutually_exclusive_group(required=True)
-    # 【修改点 1】: --find-el 改为 --find
     group.add_argument("--find", action="store_true", help="探测模式 (F8 抓取信息)")
     group.add_argument("--get-text", action="store_true", help="获取文本 (调用 hooks/get_text.py)")
     group.add_argument("--set-act", action="store_true", help="执行动作 (调用 hooks/set_act.py)")
 
-    # 2. 位置参数 (xpath, button_text/depth)
+    # 2. 位置参数 (xpath, extra)
     parser.add_argument("xpath", nargs="?", help="目标元素的 XPath")
-    parser.add_argument("extra", nargs="?", help="额外参数: get-text下为depth, set-act下为button_text")
+    parser.add_argument("extra", nargs="?", default="", help="额外参数: get-text下为depth, set-act下为[匹配文本]")
 
-    # 3. 动作参数
-    parser.add_argument("-c", "--click", nargs='?', const=True, default=None, type=int,
-                        help="点击动作。不带参数时点击第一个匹配；带数字时点击第N个（从0开始）")
-    parser.add_argument("-l", "--highlight", nargs='?', const=True, default=None, type=int,
-                        help="高亮动作。不带参数时高亮所有匹配；带数字时只高亮第N个（从0开始）")
+    # 3. 动作与修饰参数 (已修改为 --clk 和 --hl)
+    parser.add_argument("--clk", action="store_true", help="点击动作")
+    parser.add_argument("--hl", action="store_true", help="高亮动作")
+    parser.add_argument("--index", type=int, default=None, help="高亮或点击第N个匹配项（从0开始）")
     parser.add_argument("--timeout", type=float, default=10.0, help="定位超时时间")
 
     # 处理无参数输入
@@ -101,12 +99,13 @@ def main():
 
     args = parser.parse_args()
 
-    if args.click is not None and args.highlight is not None:
-        print("错误: -c 和 -l 不能同时使用", file=sys.stderr)
+    # 冲突校验
+    if args.clk and args.hl:
+        print("错误: --clk 和 --hl 不能同时使用", file=sys.stderr)
         sys.exit(1)
 
-    if args.set_act and args.click is None and args.highlight is None:
-        print("错误: --set-act 必须配合 -c (点击) 或 -l (高亮) 使用", file=sys.stderr)
+    if args.set_act and not args.clk and not args.hl:
+        print("错误: --set-act 必须配合 --clk (点击) 或 --hl (高亮) 使用", file=sys.stderr)
         sys.exit(1)
 
     # =========================================================
@@ -116,7 +115,6 @@ def main():
 
     try:
         # --- 逻辑分发 ---
-        # 【修改点 2】: args.find_el 改为 args.find
         if args.find:
             probe = UIProbe()
             probe.run()
@@ -125,37 +123,28 @@ def main():
             if not args.xpath:
                 print("错误: --get-text 模式必须提供 xpath", file=sys.stderr)
                 sys.exit(1)
-            depth = int(args.extra) if args.extra and args.extra.isdigit() else 1
+
+            # 解析 depth 参数
+            depth = 1
+            if args.extra and args.extra.isdigit():
+                depth = int(args.extra)
+
             get_text_hook.run(args.xpath, depth, args.timeout)
 
         elif args.set_act:
-            if not args.xpath or not args.extra:
-                print("错误: --set-act 模式必须提供 xpath 和 button_text", file=sys.stderr)
+            if not args.xpath:
+                print("错误: --set-act 模式必须提供 xpath", file=sys.stderr)
                 sys.exit(1)
 
-            click = False
-            highlight = False
-            index = None
-
-            if args.click is not None:
-                click = True
-                if args.click is not True:
-                    index = args.click
-            elif args.highlight is not None:
-                highlight = True
-                if args.highlight is not True:
-                    index = args.highlight
-
-            # 【终极修复】：纯位置传参，完全避免关键字参数名不匹配的报错
-            # 参数顺序对应 set_act.py 中的 run(xpath, button_text, click, highlight, timeout, index)
             set_act_hook.run(
-                args.xpath,
-                args.extra,
-                click,
-                highlight,
-                args.timeout,
-                index
+                xpath=args.xpath,
+                button_text=args.extra,
+                click=args.clk,
+                highlight=args.hl,
+                timeout=args.timeout,
+                index=args.index
             )
+
     finally:
         # 无论程序正常退出还是报错崩溃，务必恢复系统状态！
         disable_os_accessibility()
