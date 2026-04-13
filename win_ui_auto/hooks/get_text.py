@@ -6,10 +6,15 @@ import re
 import time
 import json
 import uiautomation as auto
+from constants import DEBUG  # 导入全局调试开关
 
 # 确保可以导入项目根目录
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+def debug_print(msg):
+    """仅在 DEBUG 开启时向 stderr 输出调试信息，不干扰 stdout 的 JSON 结果"""
+    if DEBUG:
+        print(msg, file=sys.stderr)
 
 def parse_xpath(xpath_str):
     if xpath_str.startswith('//'):
@@ -18,11 +23,9 @@ def parse_xpath(xpath_str):
     steps = xpath_str.split('/')
     result = []
     for step in steps:
-        if not step:
-            continue
+        if not step: continue
         match = re.match(r'^(\w+)(.*)$', step)
-        if not match:
-            continue
+        if not match: continue
         ctrl_type = match.group(1)
         predicates = match.group(2).strip()
         attrs = {}
@@ -35,13 +38,10 @@ def parse_xpath(xpath_str):
                     k, v = attr_match.groups()
                     attrs[k] = v
             else:
-                try:
-                    position = int(block)
-                except:
-                    pass
+                try: position = int(block)
+                except: pass
         result.append((ctrl_type, attrs, position))
     return result
-
 
 def locate_control_by_steps(steps, timeout=10):
     """
@@ -54,8 +54,10 @@ def locate_control_by_steps(steps, timeout=10):
     for idx, (ctrl_type, attrs, position) in enumerate(steps):
         remaining = timeout - (time.time() - start_total)
         if remaining <= 0:
+            debug_print("定位失败：总超时时间已到")
             return None
 
+        debug_print(f"正在定位第 {idx+1}/{len(steps)} 步: {ctrl_type} ...")
         found = None
         end_time = time.time() + remaining
 
@@ -90,12 +92,11 @@ def locate_control_by_steps(steps, timeout=10):
             time.sleep(0.1)
 
         if not found:
-            print(f"定位断裂：第 {idx+1} 步未找到 {ctrl_type}", file=sys.stderr)
+            debug_print(f"定位断裂：第 {idx+1} 步未找到 {ctrl_type}")
             return None
         current = found
 
     return current
-
 
 def collect_child_texts(control, max_depth=1, current_depth=0):
     """递归收集文本，增加对 Value 属性的提取"""
@@ -127,7 +128,6 @@ def collect_child_texts(control, max_depth=1, current_depth=0):
             seen.add(t)
     return res
 
-
 def run(xpath, depth=1, timeout=10):
     try:
         # 使用初始化器确保 COM 线程安全
@@ -138,11 +138,12 @@ def run(xpath, depth=1, timeout=10):
                 return None
 
             texts = collect_child_texts(control, max_depth=depth)
+            
+            # 核心输出：只输出结果 JSON
             print(json.dumps(texts, ensure_ascii=False))
             return texts
     except Exception as e:
-        print(f"执行异常: {e}", file=sys.stderr)
-
+        debug_print(f"执行异常: {e}")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -151,7 +152,6 @@ def main():
     parser.add_argument("--timeout", type=float, default=10)
     args = parser.parse_args()
     run(args.xpath, args.depth, args.timeout)
-
 
 if __name__ == "__main__":
     main()
