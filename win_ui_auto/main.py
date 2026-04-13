@@ -30,6 +30,7 @@ if BASE_DIR not in sys.path:
 try:
     from hooks import get_text as get_text_hook
     from hooks import set_act as set_act_hook
+    from hooks import el_if as el_if_hook       # 新增：元素存在性判断
     from probe import UIProbe
 except ImportError as e:
     # 即使在非 DEBUG 模式下，核心启动失败也应该报错，否则无法排查环境问题
@@ -89,6 +90,7 @@ def main():
     group.add_argument("--find", action="store_true", help="探测模式 (F8 抓取信息)")
     group.add_argument("--get-text", action="store_true", help="获取文本 (调用 hooks/get_text.py)")
     group.add_argument("--set-act", action="store_true", help="执行动作 (调用 hooks/set_act.py)")
+    group.add_argument("--if", action="store_true", help="判断元素是否存在 (返回 true/false)")   # 新增
 
     # 2. 位置参数 (xpath, extra)
     parser.add_argument("xpath", nargs="?", help="目标元素的 XPath")
@@ -148,6 +150,14 @@ def main():
                 timeout=args.timeout,
                 index=args.index
             )
+
+        elif getattr(args, "if"):   # 注意：--if 在 argparse 中存储为 args.if
+            if not args.xpath:
+                if DEBUG: print("错误: --if 需要提供 xpath", file=sys.stderr)
+                sys.exit(1)
+            result = el_if_hook.run(args.xpath, args.timeout)
+            # 输出 true 或 false（小写），供脚本判断
+            print(str(result).lower())
 
     finally:
         # 务必恢复系统状态
