@@ -1,4 +1,3 @@
-# win_ui_auto/main.py
 import argparse
 import sys
 import os
@@ -62,7 +61,8 @@ def main():
 
     # 1. 功能选择标志
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--find-el", action="store_true", help="探测模式 (F8 抓取信息)")
+    # 【修改点 1】: --find-el 改为 --find
+    group.add_argument("--find", action="store_true", help="探测模式 (F8 抓取信息)")
     group.add_argument("--get-text", action="store_true", help="获取文本 (调用 hooks/get_text.py)")
     group.add_argument("--set-act", action="store_true", help="执行动作 (调用 hooks/set_act.py)")
 
@@ -99,7 +99,8 @@ def main():
 
     try:
         # --- 逻辑分发 ---
-        if args.find_el:
+        # 【修改点 2】: args.find_el 改为 args.find
+        if args.find:
             probe = UIProbe()
             probe.run()
 
