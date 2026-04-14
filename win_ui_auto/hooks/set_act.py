@@ -18,9 +18,11 @@ try:
 except ImportError:
     pass
 
+
 def debug_print(msg):
     if DEBUG:
         print(msg, file=sys.stderr)
+
 
 def parse_xpath(xpath_str):
     if xpath_str.startswith('//'):
@@ -29,9 +31,11 @@ def parse_xpath(xpath_str):
     steps = xpath_str.split('/')
     result = []
     for step in steps:
-        if not step: continue
+        if not step:
+            continue
         match = re.match(r'^(\w+)(.*)$', step)
-        if not match: continue
+        if not match:
+            continue
         ctrl_type = match.group(1)
         predicates = match.group(2).strip()
         attrs = {}
@@ -44,10 +48,13 @@ def parse_xpath(xpath_str):
                     k, v = attr_match.groups()
                     attrs[k] = v
             else:
-                try: position = int(block)
-                except: pass
+                try:
+                    position = int(block)
+                except:
+                    pass
         result.append((ctrl_type, attrs, position))
     return result
+
 
 def bridge_to_renderer(parent_hwnd):
     """绕过断层的 UIA 树，直接用底层 HWND 生成控件并唤醒"""
@@ -65,25 +72,37 @@ def bridge_to_renderer(parent_hwnd):
     user32.EnumChildWindows(parent_hwnd, EnumChildProcType(enum_child_proc), 0)
 
     controls = []
-    if not hwnds: return controls
+    if not hwnds:
+        return controls
 
     try:
         oleacc = ctypes.windll.oleacc
+
         class GUID(ctypes.Structure):
-            _fields_ = [("Data1", ctypes.c_ulong), ("Data2", ctypes.c_ushort), ("Data3", ctypes.c_ushort), ("Data4", ctypes.c_ubyte * 8)]
-        IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf, (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
+            _fields_ = [("Data1", ctypes.c_ulong),
+                        ("Data2", ctypes.c_ushort),
+                        ("Data3", ctypes.c_ushort),
+                        ("Data4", ctypes.c_ubyte * 8)]
+
+        IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf,
+                               (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
         OBJID_CLIENT = -4
 
         for h in hwnds:
             pacc = ctypes.c_void_p()
-            oleacc.AccessibleObjectFromWindow(h, OBJID_CLIENT, ctypes.byref(IID_IAccessible), ctypes.byref(pacc))
+            oleacc.AccessibleObjectFromWindow(h, OBJID_CLIENT,
+                                               ctypes.byref(IID_IAccessible),
+                                               ctypes.byref(pacc))
             try:
                 ctrl = auto.ControlFromHandle(h)
-                if ctrl: controls.append(ctrl)
-            except: pass
+                if ctrl:
+                    controls.append(ctrl)
+            except:
+                pass
     except Exception as e:
         debug_print(f"桥接异常: {e}")
     return controls
+
 
 def locate_control_by_steps(steps, timeout=10):
     current = auto.GetRootControl()
@@ -99,7 +118,7 @@ def locate_control_by_steps(steps, timeout=10):
             return None
 
         debug_print(f"正在定位第 {idx+1}/{len(steps)} 步: {ctrl_type} ...")
-        
+
         if current and current.NativeWindowHandle:
             top_hwnd = current.NativeWindowHandle
 
@@ -110,22 +129,27 @@ def locate_control_by_steps(steps, timeout=10):
         while time.time() < end_time:
             def search_descendants(node, max_d, current_d=1):
                 results = []
-                try: children = node.GetChildren()
-                except: return results
-                
+                try:
+                    children = node.GetChildren()
+                except:
+                    return results
+
                 for child in children:
                     ctype = child.ControlTypeName.replace("Control", "")
                     is_match = (ctype == ctrl_type or ctrl_type == "*")
                     if not is_match and ctrl_type == "Document":
                         if "Render" in child.ClassName or child.ClassName == "Chrome_RenderWidgetHostHWND":
                             is_match = True
-                            
+
                     if is_match:
                         ok = True
                         for k, v in attrs.items():
-                            if getattr(child, k, None) != v: ok = False; break
-                        if ok: results.append(child)
-                        
+                            if getattr(child, k, None) != v:
+                                ok = False
+                                break
+                        if ok:
+                            results.append(child)
+
                     if current_d < max_d:
                         results.extend(search_descendants(child, max_d, current_d + 1))
                 return results
@@ -145,51 +169,60 @@ def locate_control_by_steps(steps, timeout=10):
                 if target_idx < len(matched):
                     found = matched[target_idx]
                     break
-            
+
             # 智能跳级
             if not matched and ctrl_type == "Window":
                 debug_print(f"第 {idx+1} 步 Window 未发现，智能跳过该层...")
                 found = current
                 break
-                
+
             time.sleep(0.1)
 
         if not found:
             debug_print(f"定位断裂：第 {idx+1} 步未找到 {ctrl_type}")
             return None
-        
+
         current = found
         idx += 1
 
     return current
+
 
 def find_all_controls_by_text(container, text, timeout=2):
     use_wildcard = '*' in text or '?' in text
     matches = []
 
     def name_matches(name):
-        if not name: return False
-        if use_wildcard: return fnmatch.fnmatch(name.lower(), text.lower())
+        if not name:
+            return False
+        if use_wildcard:
+            return fnmatch.fnmatch(name.lower(), text.lower())
         return text in name
 
     debug_print(f"开始在容器内搜寻文字: '{text}' ...")
     start_time = time.time()
-    
+
     while time.time() - start_time < timeout:
         def walk(parent):
             try:
                 for child in parent.GetChildren():
-                    if name_matches(child.Name): matches.append(child)
+                    if name_matches(child.Name):
+                        matches.append(child)
                     walk(child)
-            except: pass
+            except:
+                pass
+
         walk(container)
-        if matches: break
+        if matches:
+            break
         time.sleep(0.2)
-        
+
     return matches
 
+
 def highlight_controls(controls):
-    if not controls: return False
+    if not controls:
+        return False
     highlights = []
     for ctrl in controls:
         rect = ctrl.BoundingRectangle
@@ -198,45 +231,61 @@ def highlight_controls(controls):
             time.sleep(0.05)
             hl.update(rect.left, rect.top, rect.width(), rect.height())
             highlights.append(hl)
-            
+
     timeout = 10
     start_time = time.time()
     debug_print(f"按回车键立即退出所有高亮，或等待 {timeout} 秒...")
-    
+
     while time.time() - start_time < timeout:
-        if msvcrt.kbhit() and msvcrt.getch() in (b'\r', b'\n'): break
+        if msvcrt.kbhit() and msvcrt.getch() in (b'\r', b'\n'):
+            break
         time.sleep(0.05)
-    
+
     for hl in highlights:
         hl.clear()
         hl.stop()
     return True
 
+
 def click_control(ctrl):
     debug_print(f"尝试点击控件: {ctrl.Name or 'Unnamed'} (类型: {ctrl.ControlTypeName})...")
+
     try:
-        # 首选 InvokePattern (后台触发，最稳)
-        if hasattr(ctrl, 'GetInvokePattern'):
-            ctrl.GetInvokePattern().Invoke()
-            debug_print(" -> [成功] InvokePattern 触发")
-            return True
-    except: pass
-    
-    try:
-        # 降级：物理模拟点击
+        # 1. 尝试把最上层窗口拉到前台 (防止窗口在后台导致物理点击点错地方)
+        try:
+            top_win = ctrl.GetTopLevelControl()
+            if top_win:
+                top_win.SetActive(waitTime=0.1)
+        except:
+            pass
+
+        # 2. 物理校验：获取控件真实面积
+        rect = ctrl.BoundingRectangle
+        if not rect or rect.width() <= 0 or rect.height() <= 0:
+            debug_print(" -> [失败] 控件没有有效物理面积，属于幽灵空壳")
+            return False
+
+        # 3. 强行将系统鼠标移动到控件中心！
+        # 这一步极其关键：给前端网页 JS 一个 "Hover(鼠标悬停)" 的激活时间
+        ctrl.MoveCursorToMyCenter()
+        time.sleep(0.1)  # 停顿 100 毫秒
+
+        # 4. 执行纯物理点击！(彻底抛弃骗人的 InvokePattern)
         ctrl.Click(simulateMove=False)
-        debug_print(" -> [成功] 物理点击触发")
+        debug_print(" -> [成功] 已执行强制物理鼠标左击")
         return True
+
     except Exception as e:
-        debug_print(f" -> [失败]: {e}")
+        debug_print(f" -> [失败] 物理点击异常: {e}")
         return False
+
 
 def run(xpath, button_text="", click=False, highlight=False, timeout=10, index=None):
     try:
         with auto.UIAutomationInitializerInThread():
             steps = parse_xpath(xpath)
             container = locate_control_by_steps(steps, timeout=timeout)
-            
+
             if container is None:
                 debug_print("[错误] 无法定位 XPath 对应的控件")
                 print("false")
@@ -244,8 +293,10 @@ def run(xpath, button_text="", click=False, highlight=False, timeout=10, index=N
 
             # 场景 1: 没传 button_text，直接点容器本身
             if not button_text:
-                if highlight: highlight_controls([container])
-                if click: click_control(container)
+                if highlight:
+                    highlight_controls([container])
+                if click:
+                    click_control(container)
                 print("true")
                 return True
 
@@ -259,23 +310,28 @@ def run(xpath, button_text="", click=False, highlight=False, timeout=10, index=N
             if index is not None:
                 if 0 <= index < len(matches):
                     target = matches[index]
-                    if highlight: highlight_controls([target])
-                    elif click: click_control(target)
+                    if highlight:
+                        highlight_controls([target])
+                    elif click:
+                        click_control(target)
                     print("true")
                     return True
                 print("false")
                 return False
 
             # 默认操作第一个匹配项
-            if highlight: highlight_controls(matches)
-            elif click: click_control(matches[0])
+            if highlight:
+                highlight_controls(matches)
+            elif click:
+                click_control(matches[0])
             print("true")
             return True
-            
+
     except Exception as e:
         debug_print(f"执行异常: {e}")
         print("false")
         return False
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -287,6 +343,7 @@ def main():
     parser.add_argument("--index", type=int, default=None)
     args = parser.parse_args()
     run(args.xpath, args.text, args.clk, args.hl, args.timeout, args.index)
+
 
 if __name__ == "__main__":
     main()
