@@ -131,8 +131,7 @@ def locate_control_by_steps(steps, timeout=10):
                     ctype = child.ControlTypeName.replace("Control", "")
                     is_match = (ctype == ctrl_type or ctrl_type == "*")
                     if not is_match and ctrl_type == "Document":
-                        if ("Render" in child.ClassName or
-                                child.ClassName == "Chrome_RenderWidgetHostHWND"):
+                        if "Render" in child.ClassName or child.ClassName == "Chrome_RenderWidgetHostHWND":
                             is_match = True
 
                     if is_match:
@@ -145,8 +144,7 @@ def locate_control_by_steps(steps, timeout=10):
                             results.append(child)
 
                     if current_d < max_d:
-                        results.extend(search_descendants(child, max_d,
-                                                           current_d + 1))
+                        results.extend(search_descendants(child, max_d, current_d + 1))
                 return results
 
             matched = search_descendants(current, search_depth)

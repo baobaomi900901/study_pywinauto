@@ -21,6 +21,8 @@ import os
 import ctypes
 from constants import DEBUG
 
+__version__ = 2.0
+
 # 确保可以导入项目根目录下的模块
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
@@ -91,6 +93,7 @@ def main():
     group.add_argument("--get-text", action="store_true", help="获取文本 (调用 hooks/get_text.py)")
     group.add_argument("--set-act", action="store_true", help="执行动作 (调用 hooks/set_act.py)")
     group.add_argument("--if", action="store_true", help="判断元素是否存在 (返回 true/false)")
+    group.add_argument("--v", action="store_true", help="显示版本号")
 
     # 2. 位置参数 (xpath, extra)
     parser.add_argument("xpath", nargs="?", help="目标元素的 XPath")
@@ -128,7 +131,9 @@ def main():
         if args.find:
             probe = UIProbe()
             probe.run()
-
+        elif args.v:
+            print("版本号: ", __version__)
+            sys.exit(1)
         elif args.get_text:
             if not args.xpath:
                 print("错误: --get-text 模式必须提供 xpath", file=sys.stderr)
@@ -160,6 +165,7 @@ def main():
                     print("错误: --if 需要提供 xpath", file=sys.stderr)
                 sys.exit(1)
             result = el_if_hook.run(args.xpath, args.timeout)
+
 
     finally:
         # 无论程序正常退出还是报错崩溃，务必恢复系统状态！
