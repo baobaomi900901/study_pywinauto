@@ -21,7 +21,7 @@ import os
 import ctypes
 from constants import DEBUG
 
-__version__ = 3.0
+__version__ = 4.0
 
 # 确保可以导入项目根目录下的模块
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
