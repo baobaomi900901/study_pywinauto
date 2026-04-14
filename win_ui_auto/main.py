@@ -19,7 +19,7 @@ import argparse
 import sys
 import os
 import ctypes
-from constants import DEBUG  # 导入 DEBUG 开关
+from constants import DEBUG
 
 # 确保可以导入项目根目录下的模块
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,11 +30,10 @@ if BASE_DIR not in sys.path:
 try:
     from hooks import get_text as get_text_hook
     from hooks import set_act as set_act_hook
-    from hooks import el_if as el_if_hook       # 新增：元素存在性判断
+    from hooks import el_if as el_if_hook
     from probe import UIProbe
 except ImportError as e:
-    # 即使在非 DEBUG 模式下，核心启动失败也应该报错，否则无法排查环境问题
-    print(f"导入模块失败: {e}\n请确保在 win_ui_auto 目录下运行。")
+    print(f"导入模块失败: {e}\n请确保在 win_ui_auto 目录下运行，且目录结构完整。")
     sys.exit(1)
 
 # 全局变量，用于保存系统原始的无障碍状态
@@ -55,13 +54,13 @@ def enable_os_accessibility():
 
         # 开启全局标志 (2 = SPIF_SENDCHANGE, 触发全系统广播)
         user32.SystemParametersInfoW(SPI_SETSCREENREADER, 1, 0, 2)
-        
-        # --- 根据 DEBUG 开关决定是否打印 ---
+
+        # --- 加上 DEBUG 判断，并输出到 stderr ---
         if DEBUG:
-            print("[系统护航] 已拉响 OS 级无障碍全局警报，目标应用渲染已强制激活！")
+            print("[系统护航] 已拉响 OS 级无障碍全局警报，目标应用渲染已强制激活！", file=sys.stderr)
     except Exception as e:
         if DEBUG:
-            print(f"[系统护航] 开启 OS 警报失败: {e}")
+            print(f"[系统护航] 开启 OS 警报失败: {e}", file=sys.stderr)
 
 
 def disable_os_accessibility():
@@ -72,9 +71,10 @@ def disable_os_accessibility():
         ctypes.windll.user32.SystemParametersInfoW(
             SPI_SETSCREENREADER, int(ORIGINAL_SCREEN_READER), 0, 2
         )
-        # --- 根据 DEBUG 开关决定是否打印 ---
+
+        # --- 加上 DEBUG 判断，并输出到 stderr ---
         if DEBUG:
-            print("[系统护航] 已关闭 OS 级警报，系统无障碍状态已恢复。")
+            print("[系统护航] 已关闭 OS 级警报，系统无障碍状态已恢复。", file=sys.stderr)
     except:
         pass
 
@@ -90,13 +90,13 @@ def main():
     group.add_argument("--find", action="store_true", help="探测模式 (F8 抓取信息)")
     group.add_argument("--get-text", action="store_true", help="获取文本 (调用 hooks/get_text.py)")
     group.add_argument("--set-act", action="store_true", help="执行动作 (调用 hooks/set_act.py)")
-    group.add_argument("--if", action="store_true", help="判断元素是否存在 (返回 true/false)")   # 新增
+    group.add_argument("--if", action="store_true", help="判断元素是否存在 (返回 true/false)")
 
     # 2. 位置参数 (xpath, extra)
     parser.add_argument("xpath", nargs="?", help="目标元素的 XPath")
     parser.add_argument("extra", nargs="?", default="", help="额外参数: get-text下为depth, set-act下为[匹配文本]")
 
-    # 3. 动作与修饰参数
+    # 3. 动作与修饰参数 (已修改为 --clk 和 --hl)
     parser.add_argument("--clk", action="store_true", help="点击动作")
     parser.add_argument("--hl", action="store_true", help="高亮动作")
     parser.add_argument("--index", type=int, default=None, help="高亮或点击第N个匹配项（从0开始）")
@@ -111,14 +111,16 @@ def main():
 
     # 冲突校验
     if args.clk and args.hl:
-        if DEBUG: print("错误: --clk 和 --hl 不能同时使用", file=sys.stderr)
+        print("错误: --clk 和 --hl 不能同时使用", file=sys.stderr)
         sys.exit(1)
 
     if args.set_act and not args.clk and not args.hl:
-        if DEBUG: print("错误: --set-act 必须配合 --clk (点击) 或 --hl (高亮) 使用", file=sys.stderr)
+        print("错误: --set-act 必须配合 --clk (点击) 或 --hl (高亮) 使用", file=sys.stderr)
         sys.exit(1)
 
-    # 开启系统级无障碍状态
+    # =========================================================
+    # 核心生命周期：在任何 UI 自动化操作前，开启系统级无障碍状态
+    # =========================================================
     enable_os_accessibility()
 
     try:
@@ -129,6 +131,7 @@ def main():
 
         elif args.get_text:
             if not args.xpath:
+                print("错误: --get-text 模式必须提供 xpath", file=sys.stderr)
                 sys.exit(1)
 
             # 解析 depth 参数
@@ -140,6 +143,7 @@ def main():
 
         elif args.set_act:
             if not args.xpath:
+                print("错误: --set-act 模式必须提供 xpath", file=sys.stderr)
                 sys.exit(1)
 
             set_act_hook.run(
@@ -150,17 +154,15 @@ def main():
                 timeout=args.timeout,
                 index=args.index
             )
-
         elif getattr(args, "if"):   # 注意：--if 在 argparse 中存储为 args.if
             if not args.xpath:
-                if DEBUG: print("错误: --if 需要提供 xpath", file=sys.stderr)
+                if DEBUG:
+                    print("错误: --if 需要提供 xpath", file=sys.stderr)
                 sys.exit(1)
             result = el_if_hook.run(args.xpath, args.timeout)
-            # 输出 true 或 false（小写），供脚本判断
-            print(str(result).lower())
 
     finally:
-        # 务必恢复系统状态
+        # 无论程序正常退出还是报错崩溃，务必恢复系统状态！
         disable_os_accessibility()
 
 

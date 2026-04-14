@@ -2,6 +2,7 @@
 import threading
 import time
 import ctypes
+import re  # 新增正则库用于优化 XPath
 from ctypes import wintypes
 from constants import *
 from highlight import HighlightWindow
@@ -60,35 +61,70 @@ class UIProbe:
             oleacc = ctypes.windll.oleacc
 
             class GUID(ctypes.Structure):
-                _fields_ = [("Data1", ctypes.c_ulong), ("Data2", ctypes.c_ushort), ("Data3", ctypes.c_ushort), ("Data4", ctypes.c_ubyte * 8)]
+                _fields_ = [("Data1", ctypes.c_ulong),
+                            ("Data2", ctypes.c_ushort),
+                            ("Data3", ctypes.c_ushort),
+                            ("Data4", ctypes.c_ubyte * 8)]
 
-            IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf, (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
+            IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf,
+                                   (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
             OBJID_CLIENT = -4
 
             for t_hwnd in set(target_hwnds):
                 pacc = ctypes.c_void_p()
                 # 强行索要 IAccessible 对象！
-                oleacc.AccessibleObjectFromWindow(t_hwnd, OBJID_CLIENT, ctypes.byref(IID_IAccessible), ctypes.byref(pacc))
+                oleacc.AccessibleObjectFromWindow(t_hwnd, OBJID_CLIENT,
+                                                   ctypes.byref(IID_IAccessible),
+                                                   ctypes.byref(pacc))
         except:
             pass
+
+    def _optimize_cef_xpath(self, raw_xpath):
+        """【修复版】：智能净化 CEF 架构的 XPath，避免出现三个斜杠"""
+        xpath = raw_xpath
+
+        if "Chrome_WidgetWin_1" in xpath:
+            # 1. 剥离顶级 Pane 的绝对索引
+            xpath = re.sub(r"(Pane\[@ClassName='Chrome_WidgetWin_1'\])\[\d+\]", r"\1", xpath)
+
+            # 2. 直接移除幽灵 Window 层
+            xpath = re.sub(r"/Window\[\d+\]", "", xpath)
+
+            # 3. 将紧接的 /Document 替换为 //Document 深搜，并加上底层句柄类名锁定
+            xpath = re.sub(r"/Document(?:\[\d+\])?", r"//Document[@ClassName='Chrome_RenderWidgetHostHWND']", xpath)
+
+            # 4. 防御性清理：防止出现三个斜杠
+            xpath = xpath.replace("///", "//")
+
+        return xpath
 
     def _on_f8(self):
         if not self.inspect_mode:
             return
-        print("[F8] 已按下，获取当前控件信息...")
+        print("\n[F8] 已按下，获取当前控件信息...")
         with self.control_lock:
             control = self.current_control
+
         if control:
             rect = control.BoundingRectangle
             if rect:
                 x = rect.left + rect.width() // 2
                 y = rect.top + rect.height() // 2
                 info = get_control_info(control, x, y, self.highlight.get_pid())
+
                 if info:
+                    # ==========================================
+                    # 在打印和写入文件之前，执行 XPath 净化！
+                    if 'xpath' in info:
+                        info['raw_xpath'] = info['xpath']  # 留档原始路径供参考
+                        info['xpath'] = self._optimize_cef_xpath(info['xpath'])
+                    # ==========================================
+
                     self.last_printed_id, self.last_print_time = print_control_info(
                         info, self.last_printed_id, self.last_print_time, self.print_interval
                     )
                     write_control_info_to_file(info)
+                    print("→ 信息已写入 el.json")
                     print("→ 信息已打印")
                 else:
                     print("→ 获取控件信息失败")
@@ -139,14 +175,15 @@ class UIProbe:
                             self._wake_up_com_interface(x, y)
                             time.sleep(0.2)  # 给予毫秒级的内存对象同步时间
 
-                            # 2. 原生 UIA 寻路机制（系统屏障已在 main.py 中被破除）
+                            # 2. 原生 UIA 寻路机制
                             control = get_deepest_control(x, y, self.highlight.get_pid())
 
                             # ======== 更新高亮框 ========
                             if control:
                                 rect = control.BoundingRectangle
                                 if rect and rect.width() > 0 and rect.height() > 0:
-                                    self.highlight.update(rect.left, rect.top, rect.width(), rect.height())
+                                    self.highlight.update(rect.left, rect.top,
+                                                          rect.width(), rect.height())
                                 with self.control_lock:
                                     self.current_control = control
                                 self.last_processed_coord = pending_coord

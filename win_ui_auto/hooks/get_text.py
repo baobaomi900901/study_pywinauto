@@ -5,16 +5,18 @@ import argparse
 import re
 import time
 import json
+import ctypes
+from ctypes import wintypes
 import uiautomation as auto
-from constants import DEBUG  # 导入全局调试开关
+from constants import DEBUG
 
-# 确保可以导入项目根目录
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
 def debug_print(msg):
-    """仅在 DEBUG 开启时向 stderr 输出调试信息，不干扰 stdout 的 JSON 结果"""
     if DEBUG:
         print(msg, file=sys.stderr)
+
 
 def parse_xpath(xpath_str):
     if xpath_str.startswith('//'):
@@ -23,9 +25,11 @@ def parse_xpath(xpath_str):
     steps = xpath_str.split('/')
     result = []
     for step in steps:
-        if not step: continue
+        if not step:
+            continue
         match = re.match(r'^(\w+)(.*)$', step)
-        if not match: continue
+        if not match:
+            continue
         ctrl_type = match.group(1)
         predicates = match.group(2).strip()
         attrs = {}
@@ -38,71 +42,151 @@ def parse_xpath(xpath_str):
                     k, v = attr_match.groups()
                     attrs[k] = v
             else:
-                try: position = int(block)
-                except: pass
+                try:
+                    position = int(block)
+                except:
+                    pass
         result.append((ctrl_type, attrs, position))
     return result
 
+
+def bridge_to_renderer(parent_hwnd):
+    """桥接断层，直取底层渲染句柄"""
+    user32 = ctypes.windll.user32
+    hwnds = []
+
+    def enum_child_proc(h, lParam):
+        buf = ctypes.create_unicode_buffer(256)
+        user32.GetClassNameW(h, buf, 256)
+        if "Chrome_RenderWidgetHostHWND" in buf.value or "Render" in buf.value:
+            hwnds.append(h)
+        return True
+
+    EnumChildProcType = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumChildWindows(parent_hwnd, EnumChildProcType(enum_child_proc), 0)
+
+    controls = []
+    if not hwnds:
+        return controls
+
+    try:
+        oleacc = ctypes.windll.oleacc
+
+        class GUID(ctypes.Structure):
+            _fields_ = [("Data1", ctypes.c_ulong),
+                        ("Data2", ctypes.c_ushort),
+                        ("Data3", ctypes.c_ushort),
+                        ("Data4", ctypes.c_ubyte * 8)]
+
+        IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf,
+                               (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
+        OBJID_CLIENT = -4
+
+        for h in hwnds:
+            pacc = ctypes.c_void_p()
+            oleacc.AccessibleObjectFromWindow(h, OBJID_CLIENT,
+                                               ctypes.byref(IID_IAccessible),
+                                               ctypes.byref(pacc))
+            try:
+                ctrl = auto.ControlFromHandle(h)
+                if ctrl:
+                    controls.append(ctrl)
+            except:
+                pass
+    except Exception as e:
+        debug_print(f"桥接异常: {e}")
+
+    return controls
+
+
 def locate_control_by_steps(steps, timeout=10):
-    """
-    改进版逐层定位：
-    兼容处理 Chromium 架构中 Document 层可能被识别为 Pane 的情况。
-    """
     current = auto.GetRootControl()
     start_total = time.time()
+    idx = 0
+    top_hwnd = 0
 
-    for idx, (ctrl_type, attrs, position) in enumerate(steps):
+    while idx < len(steps):
+        ctrl_type, attrs, position = steps[idx]
         remaining = timeout - (time.time() - start_total)
         if remaining <= 0:
-            debug_print("定位失败：总超时时间已到")
+            debug_print(f"定位失败：在第 {idx+1} 步超时")
             return None
 
         debug_print(f"正在定位第 {idx+1}/{len(steps)} 步: {ctrl_type} ...")
+
+        if current and current.NativeWindowHandle:
+            top_hwnd = current.NativeWindowHandle
+
         found = None
         end_time = time.time() + remaining
 
+        # --- 核心修复：只在跳跃外层架构时使用深搜，一旦进入内部(Group等)，严格只找一层！ ---
+        search_depth = 4 if ctrl_type in ["Document", "Window", "Pane"] else 1
+
         while time.time() < end_time:
-            children = current.GetChildren()
-            matched = []
-            for child in children:
-                # 获取缩写类型
-                ctype = child.ControlTypeName.replace("Control", "")
+            def search_descendants(node, max_d, current_d=1):
+                results = []
+                try:
+                    children = node.GetChildren()
+                except:
+                    return results
 
-                # --- 核心兼容逻辑 ---
-                is_match = (ctype == ctrl_type or ctrl_type == "*")
+                for child in children:
+                    ctype = child.ControlTypeName.replace("Control", "")
+                    is_match = (ctype == ctrl_type or ctrl_type == "*")
+                    if not is_match and ctrl_type == "Document":
+                        if "Render" in child.ClassName or child.ClassName == "Chrome_RenderWidgetHostHWND":
+                            is_match = True
 
-                # 如果 XPath 找 Document，但实际 UIA 树节点是 Pane (Chrome 渲染器的常见变体)
-                if not is_match and ctrl_type == "Document":
-                    if child.ClassName == "Chrome_RenderWidgetHostHWND" or "Render" in child.ClassName:
-                        is_match = True
+                    if is_match:
+                        ok = True
+                        for k, v in attrs.items():
+                            if getattr(child, k, None) != v:
+                                ok = False
+                                break
+                        if ok:
+                            results.append(child)
 
-                if is_match:
-                    ok = True
-                    for k, v in attrs.items():
-                        if getattr(child, k, None) != v:
-                            ok = False
-                            break
-                    if ok:
-                        matched.append(child)
+                    if current_d < max_d:
+                        results.extend(search_descendants(child, max_d, current_d + 1))
+                return results
+
+            matched = search_descendants(current, search_depth)
+
+            # HWND 桥接
+            if not matched and ctrl_type == "Document":
+                debug_print("UIA树断层，启动 HWND 底层强直连桥接...")
+                bridge_controls = bridge_to_renderer(top_hwnd)
+                if bridge_controls:
+                    debug_print(f"HWND桥接成功！捕获并唤醒 {len(bridge_controls)} 个底层渲染节点")
+                    matched.extend(bridge_controls)
 
             if matched:
                 target_idx = (position - 1) if position and position <= len(matched) else 0
-                found = matched[target_idx]
+                if target_idx < len(matched):
+                    found = matched[target_idx]
+                    break
+
+            # 智能跳级
+            if not matched and ctrl_type == "Window":
+                debug_print(f"第 {idx+1} 步 Window 未发现，智能跳过该层...")
+                found = current
                 break
+
             time.sleep(0.1)
 
         if not found:
             debug_print(f"定位断裂：第 {idx+1} 步未找到 {ctrl_type}")
             return None
+
         current = found
+        idx += 1
 
     return current
 
-def collect_child_texts(control, max_depth=1, current_depth=0):
-    """递归收集文本，增加对 Value 属性的提取"""
-    texts = []
 
-    # 提取当前内容：优先 Value，其次 Name
+def collect_child_texts(control, max_depth=1, current_depth=0):
+    texts = []
     content = ""
     try:
         if hasattr(control, 'GetValuePattern'):
@@ -120,7 +204,6 @@ def collect_child_texts(control, max_depth=1, current_depth=0):
         for child in control.GetChildren():
             texts.extend(collect_child_texts(child, max_depth, current_depth + 1))
 
-    # 去重
     res, seen = [], set()
     for t in texts:
         if t not in seen:
@@ -128,22 +211,23 @@ def collect_child_texts(control, max_depth=1, current_depth=0):
             seen.add(t)
     return res
 
+
 def run(xpath, depth=1, timeout=10):
     try:
-        # 使用初始化器确保 COM 线程安全
         with auto.UIAutomationInitializerInThread():
             steps = parse_xpath(xpath)
             control = locate_control_by_steps(steps, timeout=timeout)
             if control is None:
-                return None
+                print("[]")
+                return []
 
             texts = collect_child_texts(control, max_depth=depth)
-            
-            # 核心输出：只输出结果 JSON
             print(json.dumps(texts, ensure_ascii=False))
             return texts
     except Exception as e:
         debug_print(f"执行异常: {e}")
+        print("[]")
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -152,6 +236,7 @@ def main():
     parser.add_argument("--timeout", type=float, default=10)
     args = parser.parse_args()
     run(args.xpath, args.depth, args.timeout)
+
 
 if __name__ == "__main__":
     main()

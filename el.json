@@ -1,0 +1,56 @@
+{
+  "ControlType": "PaneControl",
+  "ClassName": "BubbleFrameView",
+  "Name": "",
+  "position": [
+    2519,
+    104,
+    462,
+    210
+  ],
+  "Value": "",
+  "HelpText": "",
+  "IsPassword": false,
+  "index": 0,
+  "same_type_index": 0,
+  "parent": [
+    {
+      "ControlType": "PaneControl",
+      "ClassName": "#32769",
+      "index": 0,
+      "same_type_index": 0,
+      "is_desktop": true
+    },
+    {
+      "ControlType": "WindowControl",
+      "ClassName": "Chrome_WidgetWin_1",
+      "index": 5,
+      "same_type_index": 1
+    },
+    {
+      "ControlType": "PaneControl",
+      "ClassName": "BrowserRootView",
+      "index": 1,
+      "same_type_index": 1
+    },
+    {
+      "ControlType": "WindowControl",
+      "ClassName": "RootView",
+      "index": 1,
+      "same_type_index": 0,
+      "is_app": true
+    },
+    {
+      "ControlType": "PaneControl",
+      "ClassName": "NonClientView",
+      "index": 0,
+      "same_type_index": 0
+    }
+  ],
+  "automation_type": "MSAA",
+  "xpath": "//Window[@ClassName='Chrome_WidgetWin_1'][2]/Pane[@ClassName='BrowserRootView'][2]/Window[@ClassName='RootView'][1]/Pane[@ClassName='NonClientView'][1]/Pane[@ClassName='BubbleFrameView'][1]",
+  "application": {
+    "pid": 17724,
+    "name": "chrome.exe"
+  }
+}
