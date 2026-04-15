@@ -14,6 +14,7 @@ def build_exe(name, version: str):
         "uv", "run", "python", "-m",
         "nuitka",
         "--mingw64",
+        "--assume-yes-for-downloads",
         f"--product-name={name}",
         f"--file-version={version}",
         f"--product-version={version}",
