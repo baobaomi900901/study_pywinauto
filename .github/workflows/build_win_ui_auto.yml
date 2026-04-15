@@ -33,23 +33,16 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install your Dependencies
+      - name: Install And Build
         run: |
           cd win_ui_auto
           uv sync
-
-      - name: Build Executable with Nuitka
-        uses: Nuitka/Nuitka-Action@main
-        with:
-          nuitka-version: main
-          script-name: win_ui_auto/main.py
-          mode: ""
-          # disable-console: true
+          uv run build.py
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: win_ui_auto_${{ runner.os }}
           path: |
-            build/**
+            win_ui_auto/build/**
           include-hidden-files: true

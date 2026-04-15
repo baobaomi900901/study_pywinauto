@@ -25,7 +25,7 @@ def build_exe(name, version: str):
     print(f"🎉 Nuitka 打包完成")
 
 def main():
-    build_exe('win-auto', '1.0.0.0')
+    build_exe('win_ui_auto', '1.0.0.0')
 
 
 if __name__ == "__main__":
