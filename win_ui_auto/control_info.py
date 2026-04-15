@@ -223,6 +223,8 @@ def get_control_info(control, x, y, current_pid):
         }
         xpath_str = generate_xpath(current_info, parent_chain)
 
+        # 生成自动化类型
+        automation_type = detect_automation_type(control)
         info = {
             "ControlType": ctrl_type,
             "ClassName": control.ClassName or "",
@@ -234,11 +236,12 @@ def get_control_info(control, x, y, current_pid):
             "index": my_index,
             "same_type_index": my_same_type_index,
             "parent": parent_chain,
-            "automation_type": detect_automation_type(control),
-            "xpath": xpath_str
+            # ⭐ 新顺序从这里开始
+            "raw_xpath": xpath_str,           # 1️⃣ 原始路径（未经优化）
+            "xpath": xpath_str,               # 2️⃣ 净化后的路径（暂同原始）
+            "application": app_info if app_info else {},   # 3️⃣ 进程信息（若无可设为空对象）
+            "automation_type": automation_type # 4️⃣ 自动化类型
         }
-        if app_info:
-            info["application"] = app_info
         return info
     except Exception:
         return None
@@ -265,6 +268,6 @@ def write_control_info_to_file(info, filepath="el.json"):
     try:
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(info, f, ensure_ascii=False, indent=2)
-        print(f"→ 信息已写入 {filepath}")
+        # print(f"→ 信息已写入 {filepath}")
     except Exception as e:
         print(f"→ 写入文件失败: {e}")

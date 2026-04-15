@@ -15,6 +15,7 @@
 # nuitka-project: --include-module=email
 # nuitka-project: --enable-plugin=tk-inter
 
+# ./win_ui_auto/main.py
 import argparse
 import sys
 import os

@@ -7,3 +7,5 @@ win_ui_auto/@AutomationLog.txt
 
 *.pyc
 __pycache__/
+
+rpa_debug.log

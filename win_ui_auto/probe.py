@@ -127,27 +127,50 @@ class UIProbe:
                     # ==========================================
                     # 在打印和写入文件之前，执行 XPath 净化！
                     if 'xpath' in info:
-                        info['raw_xpath'] = info['xpath']  # 留档原始路径供参考
+                        # info['raw_xpath'] = info['xpath']  # 留档原始路径供参考
                         
-                        # --- 新增：获取当前目标控件的系统进程名 ---
+                        # # --- 新增：获取当前目标控件的系统进程名 ---
+                        # pname = ""
+                        # try:
+                        #     import psutil
+                        #     # control.ProcessId 是 UIA 原生提供的属性
+                        #     pname = psutil.Process(control.ProcessId).name().lower()
+                        # except Exception:
+                        #     pass
+                            
+                        # # 把获取到的进程名传给净水器！
+                        # info['xpath'] = self._optimize_cef_xpath(info['xpath'], process_name=pname)
+                    
+                        info['raw_xpath'] = info['xpath']
                         pname = ""
                         try:
                             import psutil
-                            # control.ProcessId 是 UIA 原生提供的属性
                             pname = psutil.Process(control.ProcessId).name().lower()
                         except Exception:
                             pass
-                            
-                        # 把获取到的进程名传给净水器！
+                        
                         info['xpath'] = self._optimize_cef_xpath(info['xpath'], process_name=pname)
+                        
+                        # --- 🌟 新增：无痕自动写入系统剪贴板 ---
+                        try:
+                            import tkinter as tk
+                            r = tk.Tk()
+                            r.withdraw()
+                            r.clipboard_clear()
+                            r.clipboard_append(info['xpath'])
+                            r.update()
+                            r.destroy()
+                            print("\n🌟 [神级辅助] XPath 已自动复制到您的系统剪贴板！直接 Ctrl+V 即可使用！")
+                        except Exception as e:
+                            pass
                     # ==========================================
 
                     self.last_printed_id, self.last_print_time = print_control_info(
                         info, self.last_printed_id, self.last_print_time, self.print_interval
                     )
                     write_control_info_to_file(info)
-                    print("→ 信息已写入 el.json")
-                    print("→ 信息已打印")
+                    # print("→ 信息已写入 el.json")
+                    # print("→ 信息已打印")
                 else:
                     print("→ 获取控件信息失败")
             else:
