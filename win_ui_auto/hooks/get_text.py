@@ -8,6 +8,7 @@ import json
 import ctypes
 from ctypes import wintypes
 import uiautomation as auto
+import datetime
 from constants import DEBUG
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -67,7 +68,7 @@ def parse_xpath(xpath_str):
 
 
 def bridge_to_renderer(parent_hwnd):
-    """桥接断层，直取底层渲染句柄"""
+    """桥接断层，直取底层渲染句柄，并【超度幽灵空壳】"""
     user32 = ctypes.windll.user32
     hwnds = []
 
@@ -75,45 +76,38 @@ def bridge_to_renderer(parent_hwnd):
         buf = ctypes.create_unicode_buffer(256)
         user32.GetClassNameW(h, buf, 256)
         if "Chrome_RenderWidgetHostHWND" in buf.value or "Render" in buf.value:
-            hwnds.append(h)
+            # 照妖镜第一层：如果系统底层认为窗口已隐藏，直接超度！
+            if user32.IsWindowVisible(h):
+                hwnds.append(h)
         return True
 
     EnumChildProcType = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
     user32.EnumChildWindows(parent_hwnd, EnumChildProcType(enum_child_proc), 0)
 
     controls = []
-    if not hwnds:
-        return controls
+    if not hwnds: return controls
 
     try:
         oleacc = ctypes.windll.oleacc
-
         class GUID(ctypes.Structure):
-            _fields_ = [("Data1", ctypes.c_ulong),
-                        ("Data2", ctypes.c_ushort),
-                        ("Data3", ctypes.c_ushort),
-                        ("Data4", ctypes.c_ubyte * 8)]
-
-        IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf,
-                               (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
+            _fields_ = [("Data1", ctypes.c_ulong), ("Data2", ctypes.c_ushort), ("Data3", ctypes.c_ushort), ("Data4", ctypes.c_ubyte * 8)]
+        IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf, (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
         OBJID_CLIENT = -4
 
         for h in hwnds:
             pacc = ctypes.c_void_p()
-            oleacc.AccessibleObjectFromWindow(h, OBJID_CLIENT,
-                                               ctypes.byref(IID_IAccessible),
-                                               ctypes.byref(pacc))
+            oleacc.AccessibleObjectFromWindow(h, OBJID_CLIENT, ctypes.byref(IID_IAccessible), ctypes.byref(pacc))
             try:
                 ctrl = auto.ControlFromHandle(h)
                 if ctrl:
-                    controls.append(ctrl)
-            except:
-                pass
+                    # 照妖镜第二层：如果控件没有物理面积，直接超度！
+                    rect = ctrl.BoundingRectangle
+                    if rect and rect.width() > 0 and rect.height() > 0:
+                        controls.append(ctrl)
+            except: pass
     except Exception as e:
         debug_print(f"桥接异常: {e}")
-
     return controls
-
 
 def locate_control_by_steps(steps, timeout=10):
     current = auto.GetRootControl()

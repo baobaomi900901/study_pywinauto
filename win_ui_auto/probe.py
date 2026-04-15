@@ -80,23 +80,17 @@ class UIProbe:
             pass
 
     def _optimize_cef_xpath(self, raw_xpath):
-        """【修复版】：智能净化 CEF 架构的 XPath，避免出现三个斜杠"""
-        xpath = raw_xpath
-
-        if "Chrome_WidgetWin_1" in xpath:
-            # 1. 剥离顶级 Pane 的绝对索引
-            xpath = re.sub(r"(Pane\[@ClassName='Chrome_WidgetWin_1'\])\[\d+\]", r"\1", xpath)
-
-            # 2. 直接移除幽灵 Window 层
-            xpath = re.sub(r"/Window\[\d+\]", "", xpath)
-
-            # 3. 将紧接的 /Document 替换为 //Document 深搜，并加上底层句柄类名锁定
-            xpath = re.sub(r"/Document(?:\[\d+\])?", r"//Document[@ClassName='Chrome_RenderWidgetHostHWND']", xpath)
-
-            # 4. 防御性清理：防止出现三个斜杠
-            xpath = xpath.replace("///", "//")
-
-        return xpath
+            """智能净化 CEF 架构的 XPath"""
+            xpath = raw_xpath
+            if "Chrome_WidgetWin_1" in xpath:
+                xpath = re.sub(r"(Pane\[@ClassName='Chrome_WidgetWin_1'\])\[\d+\]", r"\1", xpath)
+                xpath = re.sub(r"/Window\[\d+\]", "", xpath)
+                # 先把原有的可能存在的 Document 属性洗干净
+                xpath = re.sub(r"/Document\[@ClassName='Chrome_RenderWidgetHostHWND'\]", "/Document", xpath)
+                # 再统一加上标准护甲
+                xpath = re.sub(r"/Document(?:\[\d+\])?", r"//Document[@ClassName='Chrome_RenderWidgetHostHWND']", xpath)
+                xpath = xpath.replace("///", "//")
+            return xpath
 
     def _on_f8(self):
         if not self.inspect_mode:
