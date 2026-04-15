@@ -44,9 +44,9 @@ jobs:
             ~\AppData\Local\Nuitka\Nuitka\cache
             ~\AppData\Local\Nuitka\Nuitka\w64devkit
             ~\.cache\Nuitka\cache
-          key: ${{ runner.os }}-nuitka
+          key: ${{ runner.os }}-nuitka-ccache-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-nuitka
+            ${{ runner.os }}-nuitka-ccache-
 
       - name: Install Dependencies
         run: |
