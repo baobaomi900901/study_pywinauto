@@ -129,9 +129,10 @@ def locate_control_by_steps(steps, timeout=10):
 
         found = None
         end_time = time.time() + remaining
-
-        # --- 核心修复：只在跳跃外层架构时使用深搜，一旦进入内部(Group等)，严格只找一层！ ---
         search_depth = 4 if ctrl_type in ["Document", "Window", "Pane"] else 1
+
+        # --- 新增：给当前这一步加一个“只打印一次”的锁 ---
+        has_printed_bridge = False 
 
         while time.time() < end_time:
             def search_descendants(node, max_d, current_d=1):
@@ -165,7 +166,11 @@ def locate_control_by_steps(steps, timeout=10):
 
             # HWND 桥接
             if not matched and ctrl_type == "Document":
-                debug_print("UIA树断层，启动 HWND 底层强直连桥接...")
+                # --- 修改：检查锁，保证 10 秒的死磕过程中只打印一次提示 ---
+                if not has_printed_bridge:
+                    debug_print("UIA树断层，启动 HWND 底层强直连桥接...")
+                    has_printed_bridge = True
+                    
                 bridge_controls = bridge_to_renderer(top_hwnd)
                 if bridge_controls:
                     debug_print(f"HWND桥接成功！捕获并唤醒 {len(bridge_controls)} 个底层渲染节点")
@@ -193,7 +198,6 @@ def locate_control_by_steps(steps, timeout=10):
         idx += 1
 
     return current
-
 
 def collect_child_texts(control, max_depth=1, current_depth=0):
     texts = []
