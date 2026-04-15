@@ -21,7 +21,7 @@ import os
 import ctypes
 from constants import DEBUG
 
-__version__ = 13.0
+__version__ = 14.0
 
 def is_admin():
     """检查当前是否以管理员权限运行"""
@@ -87,6 +87,45 @@ def enable_os_accessibility():
     except Exception as e:
         write_main_log(f"[系统护航] 开启 OS 警报发生崩溃: {e}")
 
+
+def force_wake_up_all_cef():
+    """【绝杀2】：主动向全系统所有可见 CEF 渲染器发送强行唤醒电信号"""
+    try:
+        user32 = ctypes.windll.user32
+        oleacc = ctypes.windll.oleacc
+        class GUID(ctypes.Structure):
+            _fields_ = [("Data1", ctypes.c_ulong), ("Data2", ctypes.c_ushort), ("Data3", ctypes.c_ushort), ("Data4", ctypes.c_ubyte * 8)]
+        IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf, (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
+        OBJID_CLIENT = -4
+
+        hwnds = []
+        def enum_window_proc(hwnd, lParam):
+            buf = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(hwnd, buf, 256)
+            if "Chrome_RenderWidgetHostHWND" in buf.value or "Render" in buf.value:
+                # 只唤醒当前显示在屏幕上的（活着的）渲染器
+                if user32.IsWindowVisible(hwnd):
+                    hwnds.append(hwnd)
+            return True
+
+        EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+        # 遍历全系统所有子窗口
+        user32.EnumChildWindows(0, EnumWindowsProc(enum_window_proc), 0)
+
+        if hwnds:
+            write_main_log(f"[系统护航] 发现 {len(hwnds)} 个底层 CEF 渲染节点，正在发送 COM 唤醒电信号...")
+            for h in hwnds:
+                pacc = ctypes.c_void_p()
+                # 强行索要无障碍接口，逼迫 CEF 开始渲染树
+                oleacc.AccessibleObjectFromWindow(h, OBJID_CLIENT, ctypes.byref(IID_IAccessible), ctypes.byref(pacc))
+            
+            # --- 【核心灵魂】给 Chromium 引擎 0.3 秒的时间，把网页 DOM 完全转换映射到内存 ---
+            import time
+            time.sleep(0.3)
+            write_main_log("[系统护航] CEF 唤醒完毕，DOM 树已就绪。")
+            
+    except Exception as e:
+        write_main_log(f"[系统护航] CEF 强制唤醒失败: {e}")
 
 def disable_os_accessibility():
     """恢复系统原始状态"""
@@ -158,6 +197,7 @@ def main():
     # 核心生命周期：在任何 UI 自动化操作前，开启系统级无障碍状态
     # =========================================================
     enable_os_accessibility()
+    force_wake_up_all_cef()
 
     try:
         # --- 逻辑分发 ---
