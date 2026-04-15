@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'win_ui_auto/**' # 仅当 win_ui_auto 目录下任何文件变更时触发
-  workflow_dispatch: # 保留手动触发能力
+      - 'win_ui_auto/**'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5 # 版本从 v4 更新到 v5
 
       - name: Install uv
         run: pip install uv
@@ -23,18 +23,15 @@ jobs:
         working-directory: ./win_ui_auto
         run: |
           uv venv
-          # 根据你的实际情况安装依赖（任选一种）：
-          uv pip install -r requirements.txt   # 如果有 requirements.txt
-          # 或者 uv pip install -e .            # 如果项目是包结构
-          # 确保包含 pyinstaller 等打包工具（如果 build.py 中已处理，可省略）
-          uv pip install pyinstaller            # 以防 build.py 未安装
+          uv pip install -r requirements.txt
+          uv pip install pyinstaller
 
       - name: Run build.py
         working-directory: ./win_ui_auto
         run: uv run python build.py
 
       - name: Upload EXE artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5 # 版本从 v4 更新到 v5
         with:
           name: win_ui_auto_exe
-          path: ./win_ui_auto/dist/ # 请根据 build.py 的实际输出路径修改
+          path: ./win_ui_auto/dist/
