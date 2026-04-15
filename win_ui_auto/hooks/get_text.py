@@ -213,6 +213,11 @@ def collect_child_texts(control, max_depth=1, current_depth=0):
 
 
 def run(xpath, depth=1, timeout=10):
+    if DEBUG:
+        args = sys.argv[1:]
+        print('@get-text')
+        print(args)
+
     try:
         with auto.UIAutomationInitializerInThread():
             steps = parse_xpath(xpath)
