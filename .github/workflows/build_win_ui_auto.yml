@@ -1,4 +1,4 @@
-name: Build K-Update
+name: Build win_ui_auto
 on:
   push:
     branches:
@@ -7,6 +7,7 @@ on:
     paths:
       - win_ui_auto/main.py
       - win_ui_auto/pyproject.toml
+      - .github/workflows/build_win_ui_auto.yml
   # 允许你从 Actions 选项卡手动运行此工作流程
   workflow_dispatch:
 
