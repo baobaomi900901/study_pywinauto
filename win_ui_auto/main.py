@@ -21,7 +21,20 @@ import os
 import ctypes
 from constants import DEBUG
 
-__version__ = 8.0
+__version__ = 9.0
+
+# ----------------- 新增全局日志函数 -----------------
+def write_main_log(msg):
+    if DEBUG:
+        print(msg, file=sys.stderr)
+        try:
+            base_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+            log_path = os.path.join(base_dir, "rpa_debug.log")
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(f"[{timestamp}] [main] {msg}\n")
+        except:
+            pass
 
 # 确保可以导入项目根目录下的模块
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -55,14 +68,9 @@ def enable_os_accessibility():
         ORIGINAL_SCREEN_READER = current_state.value
 
         # 开启全局标志 (2 = SPIF_SENDCHANGE, 触发全系统广播)
-        user32.SystemParametersInfoW(SPI_SETSCREENREADER, 1, 0, 2)
-        
-        # --- 加上 DEBUG 判断，并输出到 stderr ---
-        if DEBUG:
-            print("[系统护航] 已拉响 OS 级无障碍全局警报，目标应用渲染已强制激活！", file=sys.stderr)
+        write_main_log("[系统护航] 已拉响 OS 级无障碍全局警报，目标应用渲染已强制激活！") # 替换这行
     except Exception as e:
-        if DEBUG:
-            print(f"[系统护航] 开启 OS 警报失败: {e}", file=sys.stderr)
+        write_main_log(f"[系统护航] 开启 OS 警报失败: {e}") # 替换这行
 
 
 def disable_os_accessibility():
@@ -74,9 +82,7 @@ def disable_os_accessibility():
             SPI_SETSCREENREADER, int(ORIGINAL_SCREEN_READER), 0, 2
         )
         
-        # --- 加上 DEBUG 判断，并输出到 stderr ---
-        if DEBUG:
-            print("[系统护航] 已关闭 OS 级警报，系统无障碍状态已恢复。", file=sys.stderr)
+        write_main_log("[系统护航] 已关闭 OS 级警报，系统无障碍状态已恢复。") # 替换这行
     except:
         pass
 
@@ -88,6 +94,7 @@ def main():
     )
 
     if DEBUG:
+        write_main_log(f"程序启动，接收到的原始参数: {sys.argv}")
         args = sys.argv[1:]
         print('@main')
         print(args)

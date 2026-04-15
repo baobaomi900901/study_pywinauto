@@ -12,10 +12,26 @@ from constants import DEBUG
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-
 def debug_print(msg):
     if DEBUG:
+        # 1. 继续输出到 stderr
         print(msg, file=sys.stderr)
+        
+        # 2. 写入到物理文件 rpa_debug.log 中
+        try:
+            # 获取当前运行的 exe 或 py 所在的目录
+            base_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+            log_path = os.path.join(base_dir, "rpa_debug.log")
+            
+            # 生成带时间戳的日志
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            log_line = f"[{timestamp}] [get_text] {msg}\n"
+            
+            # 使用 a 模式追加写入
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(log_line)
+        except Exception:
+            pass
 
 
 def parse_xpath(xpath_str):
