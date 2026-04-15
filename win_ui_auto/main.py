@@ -21,7 +21,14 @@ import os
 import ctypes
 from constants import DEBUG
 
-__version__ = 9.0
+__version__ = 10.0
+
+def is_admin():
+    """检查当前是否以管理员权限运行"""
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
 
 # ----------------- 新增全局日志函数 -----------------
 def write_main_log(msg):
@@ -56,7 +63,7 @@ ORIGINAL_SCREEN_READER = False
 
 
 def enable_os_accessibility():
-    """【绝杀1】：向系统广播屏幕阅读器已启动，逼迫所有 CEF 放弃惰性渲染"""
+    """【绝杀1】：向系统广播屏幕阅读器已启动"""
     global ORIGINAL_SCREEN_READER
     try:
         user32 = ctypes.windll.user32
@@ -67,10 +74,18 @@ def enable_os_accessibility():
         user32.SystemParametersInfoW(SPI_GETSCREENREADER, 0, ctypes.byref(current_state), 0)
         ORIGINAL_SCREEN_READER = current_state.value
 
-        # 开启全局标志 (2 = SPIF_SENDCHANGE, 触发全系统广播)
-        write_main_log("[系统护航] 已拉响 OS 级无障碍全局警报，目标应用渲染已强制激活！") # 替换这行
+        # 开启全局标志，并接收返回值
+        result = user32.SystemParametersInfoW(SPI_SETSCREENREADER, 1, 0, 2)
+        
+        if result:
+            write_main_log("[系统护航] 已拉响 OS 级无障碍全局警报，目标应用渲染已强制激活！")
+        else:
+            # 调用 GetLastError 获取 Windows 底层错误码
+            error_code = ctypes.windll.kernel32.GetLastError()
+            write_main_log(f"[系统护航] 致命警告！护航 API 调用被系统拒绝，可能没有生效。Windows 错误码: {error_code}")
+            
     except Exception as e:
-        write_main_log(f"[系统护航] 开启 OS 警报失败: {e}") # 替换这行
+        write_main_log(f"[系统护航] 开启 OS 警报发生崩溃: {e}")
 
 
 def disable_os_accessibility():
@@ -98,6 +113,12 @@ def main():
         args = sys.argv[1:]
         print('@main')
         print(args)
+
+        # --- 新增：权限体检 ---
+        if is_admin():
+            write_main_log("[环境体检] 当前运行权限: 管理员 (Administrator) - 权限状态完美。")
+        else:
+            write_main_log("[环境体检] 警告！当前运行权限: 普通用户 (Standard User)！这极可能导致无法抓取高权限应用的 UI 元素！")
 
     # 1. 功能选择标志
     group = parser.add_mutually_exclusive_group(required=True)
