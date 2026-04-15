@@ -233,7 +233,7 @@ def click_control(ctrl):
         # 3. 强行将系统鼠标移动到控件中心！
         # 这一步极其关键：给前端网页 JS 一个 "Hover(鼠标悬停)" 的激活时间
         ctrl.MoveCursorToMyCenter()
-        time.sleep(0.1)  # 停顿 100 毫秒
+        time.sleep(0.1) # 停顿 100 毫秒
 
         # 4. 执行纯物理点击！(彻底抛弃骗人的 InvokePattern)
         ctrl.Click(simulateMove=False)

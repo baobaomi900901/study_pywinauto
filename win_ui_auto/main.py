@@ -21,7 +21,7 @@ import os
 import ctypes
 from constants import DEBUG
 
-__version__ = 7.0
+__version__ = 8.0
 
 # 确保可以导入项目根目录下的模块
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -56,7 +56,7 @@ def enable_os_accessibility():
 
         # 开启全局标志 (2 = SPIF_SENDCHANGE, 触发全系统广播)
         user32.SystemParametersInfoW(SPI_SETSCREENREADER, 1, 0, 2)
-
+        
         # --- 加上 DEBUG 判断，并输出到 stderr ---
         if DEBUG:
             print("[系统护航] 已拉响 OS 级无障碍全局警报，目标应用渲染已强制激活！", file=sys.stderr)
@@ -73,7 +73,7 @@ def disable_os_accessibility():
         ctypes.windll.user32.SystemParametersInfoW(
             SPI_SETSCREENREADER, int(ORIGINAL_SCREEN_READER), 0, 2
         )
-
+        
         # --- 加上 DEBUG 判断，并输出到 stderr ---
         if DEBUG:
             print("[系统护航] 已关闭 OS 级警报，系统无障碍状态已恢复。", file=sys.stderr)
@@ -89,6 +89,7 @@ def main():
 
     if DEBUG:
         args = sys.argv[1:]
+        print('@main')
         print(args)
 
     # 1. 功能选择标志
@@ -135,9 +136,11 @@ def main():
         if args.find:
             probe = UIProbe()
             probe.run()
+
         elif args.v:
             print("版本号: ", __version__)
             sys.exit(1)
+
         elif args.get_text:
             if not args.xpath:
                 print("错误: --get-text 模式必须提供 xpath", file=sys.stderr)
@@ -165,12 +168,9 @@ def main():
             )
         elif getattr(args, "if"):   # 注意：--if 在 argparse 中存储为 args.if
             if not args.xpath:
-                if DEBUG:
-                    print("错误: --if 需要提供 xpath", file=sys.stderr)
+                if DEBUG: print("错误: --if 需要提供 xpath", file=sys.stderr)
                 sys.exit(1)
             result = el_if_hook.run(args.xpath, args.timeout)
-
-    
 
     finally:
         # 无论程序正常退出还是报错崩溃，务必恢复系统状态！
