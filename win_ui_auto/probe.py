@@ -83,12 +83,20 @@ class UIProbe:
             """智能净化 CEF 架构的 XPath"""
             xpath = raw_xpath
             if "Chrome_WidgetWin_1" in xpath:
+                # 1. 斩断外围乱象：移除 Pane 后面的所有变动索引
                 xpath = re.sub(r"(Pane\[@ClassName='Chrome_WidgetWin_1'\])\[\d+\]", r"\1", xpath)
-                xpath = re.sub(r"/Window\[\d+\]", "", xpath)
-                # 先把原有的可能存在的 Document 属性洗干净
-                xpath = re.sub(r"/Document\[@ClassName='Chrome_RenderWidgetHostHWND'\]", "/Document", xpath)
-                # 再统一加上标准护甲
-                xpath = re.sub(r"/Document(?:\[\d+\])?", r"//Document[@ClassName='Chrome_RenderWidgetHostHWND']", xpath)
+                
+                # 2. 移除极其不稳定的 Window 层级 (我们的底层引擎会自动跳级寻找)
+                xpath = re.sub(r"/Window(?:\[.*?\])?(?:\[\d+\])?", "", xpath)
+                
+                # 3. 核弹级清洗 Document：无论系统返回什么妖魔鬼怪的 Document
+                # 把 /Document[@xxx][1][@yyy][2] 这种全部削平成最干净的 /Document
+                xpath = re.sub(r"/Document(?:\[.*?\])*", "/Document", xpath)
+                
+                # 4. 重新穿上标准化、带穿透属性的护甲
+                xpath = xpath.replace("/Document", "//Document[@ClassName='Chrome_RenderWidgetHostHWND']")
+                
+                # 5. 清理多余的斜杠
                 xpath = xpath.replace("///", "//")
             return xpath
 

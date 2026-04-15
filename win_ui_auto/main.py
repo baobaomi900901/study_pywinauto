@@ -21,7 +21,7 @@ import os
 import ctypes
 from constants import DEBUG
 
-__version__ = 12.0
+__version__ = 13.0
 
 def is_admin():
     """检查当前是否以管理员权限运行"""
