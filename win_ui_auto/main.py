@@ -19,9 +19,11 @@ import argparse
 import sys
 import os
 import ctypes
+from ctypes import wintypes
+import datetime
 from constants import DEBUG
 
-__version__ = 14.0
+__version__ = 15.0
 
 def is_admin():
     """检查当前是否以管理员权限运行"""
@@ -103,9 +105,21 @@ def force_wake_up_all_cef():
             buf = ctypes.create_unicode_buffer(256)
             user32.GetClassNameW(hwnd, buf, 256)
             if "Chrome_RenderWidgetHostHWND" in buf.value or "Render" in buf.value:
-                # 只唤醒当前显示在屏幕上的（活着的）渲染器
                 if user32.IsWindowVisible(hwnd):
-                    hwnds.append(hwnd)
+                    # 获取该窗口所属的进程 ID
+                    pid = ctypes.c_ulong()
+                    user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+                    
+                    # 引入 psutil 进行进程过滤 (如果没装需要 uv pip install psutil)
+                    import psutil
+                    try:
+                        proc = psutil.Process(pid.value)
+                        proc_name = proc.name().lower()
+                        # 【白名单】：只唤醒目标软件，绝对不碰 RPA 自身的进程
+                        if "ideal.exe" in proc_name or "wxwork" in proc_name:
+                            hwnds.append(hwnd)
+                    except:
+                        pass
             return True
 
         EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
