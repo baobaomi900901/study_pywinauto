@@ -79,26 +79,35 @@ class UIProbe:
         except:
             pass
 
-    def _optimize_cef_xpath(self, raw_xpath):
-            """智能净化 CEF 架构的 XPath"""
-            xpath = raw_xpath
-            if "Chrome_WidgetWin_1" in xpath:
-                # 1. 斩断外围乱象：移除 Pane 后面的所有变动索引
-                xpath = re.sub(r"(Pane\[@ClassName='Chrome_WidgetWin_1'\])\[\d+\]", r"\1", xpath)
-                
-                # 2. 移除极其不稳定的 Window 层级 (我们的底层引擎会自动跳级寻找)
-                xpath = re.sub(r"/Window(?:\[.*?\])?(?:\[\d+\])?", "", xpath)
-                
-                # 3. 核弹级清洗 Document：无论系统返回什么妖魔鬼怪的 Document
-                # 把 /Document[@xxx][1][@yyy][2] 这种全部削平成最干净的 /Document
-                xpath = re.sub(r"/Document(?:\[.*?\])*", "/Document", xpath)
-                
-                # 4. 重新穿上标准化、带穿透属性的护甲
-                xpath = xpath.replace("/Document", "//Document[@ClassName='Chrome_RenderWidgetHostHWND']")
-                
-                # 5. 清理多余的斜杠
-                xpath = xpath.replace("///", "//")
-            return xpath
+    def _optimize_cef_xpath(self, raw_xpath, process_name=""):
+        """【终极净水器】强力清洗 CEF 架构的 XPath，并自动打上进程基因锁"""
+        xpath = raw_xpath
+        if "Chrome_WidgetWin_1" in xpath:
+            # 1. 斩断外围乱象：移除 Pane 后面的所有变动索引
+            xpath = re.sub(r"(Pane\[@ClassName='Chrome_WidgetWin_1'\])\[\d+\]", r"\1", xpath)
+            
+            # ====================================================
+            # --- 新增：自动把进程名作为基因锁，焊死在第一层大门上 ---
+            if process_name:
+                xpath = xpath.replace(
+                    "Pane[@ClassName='Chrome_WidgetWin_1']", 
+                    f"Pane[@ClassName='Chrome_WidgetWin_1'][@ProcessName='{process_name}']"
+                )
+            # ====================================================
+
+            # 2. 移除极其不稳定的 Window 层级
+            xpath = re.sub(r"/Window(?:\[.*?\])?(?:\[\d+\])?", "", xpath)
+            
+            # 3. 核弹级清洗 Document
+            xpath = re.sub(r"/Document(?:\[.*?\])*", "/Document", xpath)
+            
+            # 4. 重新穿上标准化、带穿透属性的护甲
+            xpath = xpath.replace("/Document", "//Document[@ClassName='Chrome_RenderWidgetHostHWND']")
+            
+            # 5. 清理多余的斜杠
+            xpath = xpath.replace("///", "//")
+            
+        return xpath
 
     def _on_f8(self):
         if not self.inspect_mode:
@@ -119,7 +128,18 @@ class UIProbe:
                     # 在打印和写入文件之前，执行 XPath 净化！
                     if 'xpath' in info:
                         info['raw_xpath'] = info['xpath']  # 留档原始路径供参考
-                        info['xpath'] = self._optimize_cef_xpath(info['xpath'])
+                        
+                        # --- 新增：获取当前目标控件的系统进程名 ---
+                        pname = ""
+                        try:
+                            import psutil
+                            # control.ProcessId 是 UIA 原生提供的属性
+                            pname = psutil.Process(control.ProcessId).name().lower()
+                        except Exception:
+                            pass
+                            
+                        # 把获取到的进程名传给净水器！
+                        info['xpath'] = self._optimize_cef_xpath(info['xpath'], process_name=pname)
                     # ==========================================
 
                     self.last_printed_id, self.last_print_time = print_control_info(

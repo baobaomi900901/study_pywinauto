@@ -131,7 +131,7 @@ def locate_control_by_steps(steps, timeout=10):
         end_time = time.time() + remaining
         search_depth = 4 if ctrl_type in ["Document", "Window", "Pane"] else 1
 
-        # --- 新增：给当前这一步加一个“只打印一次”的锁 ---
+        # --- 给当前这一步加一个“只打印一次”的锁 ---
         has_printed_bridge = False 
 
         while time.time() < end_time:
@@ -152,9 +152,25 @@ def locate_control_by_steps(steps, timeout=10):
                     if is_match:
                         ok = True
                         for k, v in attrs.items():
-                            if getattr(child, k, None) != v:
+                            # ==========================================
+                            # --- 核心外挂 1：自定义跨进程装甲 ProcessName ---
+                            # ==========================================
+                            if k == 'ProcessName':
+                                try:
+                                    import psutil
+                                    pname = psutil.Process(child.ProcessId).name().lower()
+                                    if v.lower() not in pname:
+                                        ok = False
+                                        break
+                                except:
+                                    ok = False
+                                    break
+                            # ==========================================
+                            # 走传统的 UIA 属性比对 (ClassName, Name 等)
+                            elif getattr(child, k, None) != v:
                                 ok = False
                                 break
+                                
                         if ok:
                             results.append(child)
 
@@ -166,7 +182,6 @@ def locate_control_by_steps(steps, timeout=10):
 
             # HWND 桥接
             if not matched and ctrl_type == "Document":
-                # --- 修改：检查锁，保证 10 秒的死磕过程中只打印一次提示 ---
                 if not has_printed_bridge:
                     debug_print("UIA树断层，启动 HWND 底层强直连桥接...")
                     has_printed_bridge = True
@@ -180,6 +195,21 @@ def locate_control_by_steps(steps, timeout=10):
                 target_idx = (position - 1) if position and position <= len(matched) else 0
                 if target_idx < len(matched):
                     found = matched[target_idx]
+                    
+                    # ====================================================
+                    # --- 核心外挂 2：打破 Chromium 后台遮挡休眠机制 ---
+                    # ====================================================
+                    if ctrl_type in ["Pane", "Window"]:
+                        try:
+                            if hasattr(found, 'GetWindowPattern'):
+                                found.GetWindowPattern().SetWindowVisualState(auto.WindowVisualState.Normal)
+                            found.SetActive(waitTime=0.1)
+                            time.sleep(0.3) # 给 CEF 引擎 0.3 秒的渲染缓冲时间
+                            debug_print(f"[反休眠] 已将 {ctrl_type} 强行拽至前台，DOM 树已逼迫渲染就绪！")
+                        except Exception as e:
+                            pass
+                    # ====================================================
+                    
                     break
 
             # 智能跳级
