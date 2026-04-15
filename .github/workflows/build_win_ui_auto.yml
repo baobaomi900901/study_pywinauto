@@ -33,11 +33,16 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install And Build
+      - name: Install Dependencies
         run: |
           cd win_ui_auto
           uv sync
+
+      - name: Build
+        run: |
           uv run build.py
+        env:
+          PYTHONUTF8: 1
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
