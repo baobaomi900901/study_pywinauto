@@ -8,6 +8,7 @@ import fnmatch
 import ctypes
 from ctypes import wintypes
 import uiautomation as auto
+import datetime  # <--- 新增导入：用于写日志时间戳
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from constants import DEBUG
@@ -21,6 +22,15 @@ except ImportError:
 def debug_print(msg):
     if DEBUG:
         print(msg, file=sys.stderr)
+        # --- 新增：同步支持物理文件日志写入 ---
+        try:
+            base_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+            log_path = os.path.join(base_dir, "rpa_debug.log")
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(f"[{timestamp}] [set_act] {msg}\n")
+        except:
+            pass
 
 def parse_xpath(xpath_str):
     if xpath_str.startswith('//'):
@@ -50,7 +60,7 @@ def parse_xpath(xpath_str):
     return result
 
 def bridge_to_renderer(parent_hwnd):
-    """绕过断层的 UIA 树，直接用底层 HWND 生成控件并唤醒"""
+    """绕过断层的 UIA 树，直接用底层 HWND 生成控件并唤醒（自带照妖镜）"""
     user32 = ctypes.windll.user32
     hwnds = []
 
@@ -58,7 +68,9 @@ def bridge_to_renderer(parent_hwnd):
         buf = ctypes.create_unicode_buffer(256)
         user32.GetClassNameW(h, buf, 256)
         if "Chrome_RenderWidgetHostHWND" in buf.value or "Render" in buf.value:
-            hwnds.append(h)
+            # 照妖镜第一层：只抓可见的
+            if user32.IsWindowVisible(h):
+                hwnds.append(h)
         return True
 
     EnumChildProcType = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
@@ -79,7 +91,11 @@ def bridge_to_renderer(parent_hwnd):
             oleacc.AccessibleObjectFromWindow(h, OBJID_CLIENT, ctypes.byref(IID_IAccessible), ctypes.byref(pacc))
             try:
                 ctrl = auto.ControlFromHandle(h)
-                if ctrl: controls.append(ctrl)
+                if ctrl:
+                    # 照妖镜第二层：只抓有物理面积的
+                    rect = ctrl.BoundingRectangle
+                    if rect and rect.width() > 0 and rect.height() > 0:
+                        controls.append(ctrl)
             except: pass
     except Exception as e:
         debug_print(f"桥接异常: {e}")
@@ -107,6 +123,9 @@ def locate_control_by_steps(steps, timeout=10):
         end_time = time.time() + remaining
         search_depth = 4 if ctrl_type in ["Document", "Window", "Pane"] else 1
 
+        # --- 给当前这一步加一个“只打印一次”的锁 ---
+        has_printed_bridge = False 
+
         while time.time() < end_time:
             def search_descendants(node, max_d, current_d=1):
                 results = []
@@ -123,7 +142,25 @@ def locate_control_by_steps(steps, timeout=10):
                     if is_match:
                         ok = True
                         for k, v in attrs.items():
-                            if getattr(child, k, None) != v: ok = False; break
+                            # ==========================================
+                            # --- 核心外挂 1：自定义跨进程装甲 ProcessName ---
+                            # ==========================================
+                            if k == 'ProcessName':
+                                try:
+                                    import psutil
+                                    pname = psutil.Process(child.ProcessId).name().lower()
+                                    if v.lower() not in pname:
+                                        ok = False
+                                        break
+                                except:
+                                    ok = False
+                                    break
+                            # ==========================================
+                            # 走传统的 UIA 属性比对
+                            elif getattr(child, k, None) != v:
+                                ok = False
+                                break
+                                
                         if ok: results.append(child)
                         
                     if current_d < max_d:
@@ -134,7 +171,10 @@ def locate_control_by_steps(steps, timeout=10):
 
             # HWND 桥接
             if not matched and ctrl_type == "Document":
-                debug_print("UIA树断层，启动 HWND 底层强直连桥接...")
+                if not has_printed_bridge:
+                    debug_print("UIA树断层，启动 HWND 底层强直连桥接...")
+                    has_printed_bridge = True
+                    
                 bridge_controls = bridge_to_renderer(top_hwnd)
                 if bridge_controls:
                     debug_print(f"HWND桥接成功！捕获并唤醒 {len(bridge_controls)} 个底层渲染节点")
@@ -144,6 +184,21 @@ def locate_control_by_steps(steps, timeout=10):
                 target_idx = (position - 1) if position and position <= len(matched) else 0
                 if target_idx < len(matched):
                     found = matched[target_idx]
+                    
+                    # ====================================================
+                    # --- 核心外挂 2：打破 Chromium 后台遮挡休眠机制 ---
+                    # ====================================================
+                    if ctrl_type in ["Pane", "Window"]:
+                        try:
+                            if hasattr(found, 'GetWindowPattern'):
+                                found.GetWindowPattern().SetWindowVisualState(auto.WindowVisualState.Normal)
+                            found.SetActive(waitTime=0.1)
+                            time.sleep(0.3)
+                            debug_print(f"[反休眠] 已将 {ctrl_type} 强行拽至前台，DOM 树已逼迫渲染就绪！")
+                        except Exception as e:
+                            pass
+                    # ====================================================
+                    
                     break
             
             # 智能跳级
