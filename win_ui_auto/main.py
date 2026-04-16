@@ -15,7 +15,6 @@
 # nuitka-project: --include-module=email
 # nuitka-project: --enable-plugin=tk-inter
 
-# ./win_ui_auto/main.py
 import argparse
 import sys
 import os
@@ -24,7 +23,11 @@ from ctypes import wintypes
 import datetime
 from constants import DEBUG
 
-__version__ = "v1.0.0.0"
+# 脚本自身版本号（从 _version.py 读取）
+try:
+    from _version import __version__
+except ImportError:
+    __version__ = "dev"
 
 def is_admin():
     """检查当前是否以管理员权限运行"""
