@@ -190,7 +190,7 @@ wheels = [
 
 [[package]]
 name = "win-ui-auto"
-version = "1.0.0.1"
+version = "1.0.0.2"
 source = { virtual = "." }
 dependencies = [
     { name = "nuitka", extra = ["onefile"] },

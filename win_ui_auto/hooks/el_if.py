@@ -129,7 +129,7 @@ def locate_control_by_steps(steps, timeout=10):
 
         found = None
         end_time = time.time() + remaining
-        search_depth = 4 if ctrl_type in ["Document", "Window", "Pane"] else 1
+        search_depth = 7 if ctrl_type in ["Document", "Window", "Pane", "Group", "Custom"] else 5
 
         has_printed_bridge = False
 
@@ -223,13 +223,13 @@ def locate_control_by_steps(steps, timeout=10):
                     found = matched[target_idx]
 
                     # 打破 Chromium 后台遮挡休眠机制
-                    if ctrl_type in ["Pane", "Window"]:
+                    if ctrl_type == "Window" or (ctrl_type == "Pane" and idx == 0):
                         try:
                             if hasattr(found, 'GetWindowPattern'):
                                 found.GetWindowPattern().SetWindowVisualState(auto.WindowVisualState.Normal)
                             found.SetActive(waitTime=0.1)
                             time.sleep(0.3)
-                            debug_print(f"[反休眠] 已将 {ctrl_type} 强行拽至前台，DOM 树已逼迫渲染就绪！")
+                            debug_print(f"[反休眠] 已将顶级 {ctrl_type} 强行拽至前台，DOM 树已逼迫渲染就绪！")
                         except Exception as e:
                             pass
 
