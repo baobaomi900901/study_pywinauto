@@ -129,7 +129,17 @@ def locate_control_by_steps(steps, timeout=10):
 
         found = None
         end_time = time.time() + remaining
-        search_depth = 7 if ctrl_type in ["Document", "Window", "Pane", "Group", "Custom"] else 5
+        
+        # =========================================================
+        # --- 终极智能视野引擎 ---
+        # 1. 如果带有精确索引（如 Group[2]），必须严格遵守层级，深度锁定为 1
+        # 2. 如果没有索引（如 MenuBar, Document），开启跨级深搜八倍镜
+        # =========================================================
+        if position is not None:
+            search_depth = 1
+        else:
+            search_depth = 7 if ctrl_type in ["Document", "Window", "Pane", "Group", "Custom"] else 5
+        # =========================================================
 
         has_printed_bridge = False
 
@@ -284,8 +294,8 @@ def run(xpath, timeout=10.0):
             control = locate_control_by_steps(steps, timeout=timeout)
 
             if control is not None:
-                # 内容探活：向下探2层检查是否有文本
-                texts = collect_child_texts(control, max_depth=2)
+                # 内容探活：向下探 4 层检查是否有文本 (CEF 嵌套往往比较深)
+                texts = collect_child_texts(control, max_depth=4)
 
                 if len(texts) > 0:
                     print("true")
