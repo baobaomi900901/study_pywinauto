@@ -1,6 +1,6 @@
 [project]
 name = "win-ui-auto"
-version = "1.0.0.3"
+version = "1.0.0.4"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"

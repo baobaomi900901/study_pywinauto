@@ -231,18 +231,6 @@ def locate_control_by_steps(steps, timeout=10):
                 target_idx = (position - 1) if position and position <= len(matched) else 0
                 if target_idx < len(matched):
                     found = matched[target_idx]
-
-                    # 打破 Chromium 后台遮挡休眠机制
-                    if ctrl_type == "Window" or (ctrl_type == "Pane" and idx == 0):
-                        try:
-                            if hasattr(found, 'GetWindowPattern'):
-                                found.GetWindowPattern().SetWindowVisualState(auto.WindowVisualState.Normal)
-                            found.SetActive(waitTime=0.1)
-                            time.sleep(0.3)
-                            debug_print(f"[反休眠] 已将顶级 {ctrl_type} 强行拽至前台，DOM 树已逼迫渲染就绪！")
-                        except Exception as e:
-                            pass
-
                     break
 
             # 如果 Window 层没找到，允许智能跳过（但这种情况极少发生）
@@ -294,6 +282,20 @@ def run(xpath, timeout=10.0):
             control = locate_control_by_steps(steps, timeout=timeout)
 
             if control is not None:
+                # ====================================================
+                # 【新增核心防御：幽灵驱魔】过滤已关闭但仍在内存中的假死控件
+                # ====================================================
+                try:
+                    rect = control.BoundingRectangle
+                    if not rect or rect.width() <= 0 or rect.height() <= 0:
+                        debug_print("判定假死：控件虽然在内存中，但没有物理面积，属于已被关闭或隐藏的幽灵控件")
+                        print("false")
+                        return False
+                except Exception:
+                    print("false")
+                    return False
+                # ====================================================
+
                 # 内容探活：向下探 4 层检查是否有文本 (CEF 嵌套往往比较深)
                 texts = collect_child_texts(control, max_depth=4)
 
@@ -311,7 +313,6 @@ def run(xpath, timeout=10.0):
         debug_print(f"执行异常: {e}")
         print("false")
         return False
-
 
 def main():
     import argparse
