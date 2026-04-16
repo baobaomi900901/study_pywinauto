@@ -2,7 +2,7 @@
 import threading
 import time
 import ctypes
-import re  # 新增正则库用于优化 XPath
+import re # 新增正则库用于优化 XPath
 from ctypes import wintypes
 from constants import *
 from highlight import HighlightWindow
@@ -67,15 +67,15 @@ class UIProbe:
                             ("Data4", ctypes.c_ubyte * 8)]
 
             IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf,
-                                   (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
+                                  (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
             OBJID_CLIENT = -4
 
             for t_hwnd in set(target_hwnds):
                 pacc = ctypes.c_void_p()
                 # 强行索要 IAccessible 对象！
                 oleacc.AccessibleObjectFromWindow(t_hwnd, OBJID_CLIENT,
-                                                   ctypes.byref(IID_IAccessible),
-                                                   ctypes.byref(pacc))
+                                                  ctypes.byref(IID_IAccessible),
+                                                  ctypes.byref(pacc))
         except:
             pass
 
@@ -204,21 +204,21 @@ class UIProbe:
                             self.highlight.clear()
                             with self.control_lock:
                                 self.current_control = None
-                        time.sleep(NON_INSPECT_SLEEP)  # type: ignore
+                        time.sleep(NON_INSPECT_SLEEP) # type: ignore
                         continue
 
                     now = time.time()
                     if (pending_coord is not None and
-                            (now - last_move_time) >= HOVER_DELAY and  # type: ignore
+                            (now - last_move_time) >= HOVER_DELAY and # type: ignore
                             pending_coord != self.last_processed_coord):
                         x, y = pending_coord
                         try:
                             self.highlight.clear()
-                            time.sleep(CLEAR_DELAY)  # type: ignore
+                            time.sleep(CLEAR_DELAY) # type: ignore
 
                             # 1. 向鼠标悬停位置强索 COM 接口，保证 UIA 数据鲜活
                             self._wake_up_com_interface(x, y)
-                            time.sleep(0.2)  # 给予毫秒级的内存对象同步时间
+                            time.sleep(0.2) # 给予毫秒级的内存对象同步时间
 
                             # 2. 原生 UIA 寻路机制
                             control = get_deepest_control(x, y, self.highlight.get_pid())
@@ -243,7 +243,7 @@ class UIProbe:
                             with self.control_lock:
                                 self.current_control = None
 
-                    time.sleep(LOOP_SLEEP)  # type: ignore
+                    time.sleep(LOOP_SLEEP) # type: ignore
         except Exception as e:
             print(f"[UI探测] 初始化失败: {e}")
         finally:
