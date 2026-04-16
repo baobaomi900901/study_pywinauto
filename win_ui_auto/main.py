@@ -23,20 +23,17 @@ from ctypes import wintypes
 import datetime
 from constants import DEBUG
 
-# 脚本自身版本号（从 _version.py 读取）
 try:
     from _version import __version__
 except ImportError:
     __version__ = "dev"
 
 def is_admin():
-    """检查当前是否以管理员权限运行"""
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
     except:
         return False
 
-# ----------------- 新增全局日志函数 -----------------
 def write_main_log(msg):
     if DEBUG:
         print(msg, file=sys.stderr)
@@ -49,62 +46,51 @@ def write_main_log(msg):
         except:
             pass
 
-# 确保可以导入项目根目录下的模块
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-# 导入 Hooks 模块
+# 导入 Hooks 模块 (已移除 set_act_hook，引入 hl_hook 和 clk_hook)
 try:
-    from hooks import get_text as get_text_hook
-    from hooks import set_act as set_act_hook
+    from hooks import get as get_hook
     from hooks import el_if as el_if_hook
+    from hooks import hl as hl_hook
+    from hooks import clk as clk_hook
     from probe import UIProbe
 except ImportError as e:
     print(f"导入模块失败: {e}\n请确保在 win_ui_auto 目录下运行，且目录结构完整。")
     sys.exit(1)
 
-# 全局变量，用于保存系统原始的无障碍状态
 ORIGINAL_SCREEN_READER = False
 
-
 def enable_os_accessibility():
-    """1. 开启系统屏幕阅读器标志"""
     global ORIGINAL_SCREEN_READER
     try:
         user32 = ctypes.windll.user32
-        SPI_GETSCREENREADER = 0x0046 # 查询当前系统是否启用了屏幕阅读器
-        SPI_SETSCREENREADER = 0x0047 # 主动设置系统的屏幕阅读器状态
+        SPI_GETSCREENREADER = 0x0046 
+        SPI_SETSCREENREADER = 0x0047 
 
-        # 查询当前系统是否开启了屏幕阅读器，并将结果保存到全局变量 ORIGINAL_SCREEN_READER 中，以便程序结束时恢复原状
         current_state = ctypes.c_bool()
         user32.SystemParametersInfoW(SPI_GETSCREENREADER, 0, ctypes.byref(current_state), 0)
         ORIGINAL_SCREEN_READER = current_state.value
 
-        # 开启全局标志，并接收返回值
         result = user32.SystemParametersInfoW(SPI_SETSCREENREADER, 1, 0, 2)
-        
         if result:
             write_main_log("[系统护航] 已拉响 OS 级无障碍全局警报，目标应用渲染已强制激活！")
         else:
-            # 调用 GetLastError 获取 Windows 底层错误码
             error_code = ctypes.windll.kernel32.GetLastError()
-            write_main_log(f"[系统护航] 致命警告！护航 API 调用被系统拒绝，可能没有生效。Windows 错误码: {error_code}")
-            
+            write_main_log(f"[系统护航] 致命警告！护航 API 调用被系统拒绝。Windows 错误码: {error_code}")
     except Exception as e:
         write_main_log(f"[系统护航] 开启 OS 警报发生崩溃: {e}")
 
-
 def force_wake_up_all_cef():
-    """2. 强制唤醒 CEF 渲染窗口"""
     try:
-        # 第一步：准备底层 API
-        user32 = ctypes.windll.user32 # 负责管窗口
-        oleacc = ctypes.windll.oleacc # 负责管无障碍（Accessibility）接口
+        user32 = ctypes.windll.user32 
+        oleacc = ctypes.windll.oleacc 
         class GUID(ctypes.Structure):
             _fields_ = [("Data1", ctypes.c_ulong), ("Data2", ctypes.c_ushort), ("Data3", ctypes.c_ushort), ("Data4", ctypes.c_ubyte * 8)]
-        IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf, (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71)) # UI 无障碍树对象
-        OBJID_CLIENT = -4 # 窗口内部真正用来显示应用核心内容和渲染网页的区域, 存在于 winuser.h
+        IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf, (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71)) 
+        OBJID_CLIENT = -4 
 
         hwnds = []
         def enum_window_proc(hwnd, lParam):
@@ -112,16 +98,12 @@ def force_wake_up_all_cef():
             user32.GetClassNameW(hwnd, buf, 256)
             if "Chrome_RenderWidgetHostHWND" in buf.value or "Render" in buf.value:
                 if user32.IsWindowVisible(hwnd):
-                    # 获取该窗口所属的进程 ID
                     pid = ctypes.c_ulong()
                     user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-                    
-                    # 引入 psutil 进行进程过滤 (如果没装需要 uv pip install psutil)
                     import psutil
                     try:
                         proc = psutil.Process(pid.value)
                         proc_name = proc.name().lower()
-                        # 【白名单】：只唤醒目标软件，绝对不碰 RPA 自身的进程
                         if "ideal.exe" in proc_name or "wxwork" in proc_name:
                             hwnds.append(hwnd)
                     except:
@@ -129,17 +111,13 @@ def force_wake_up_all_cef():
             return True
 
         EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
-        # 遍历全系统所有子窗口
         user32.EnumChildWindows(0, EnumWindowsProc(enum_window_proc), 0)
 
         if hwnds:
             write_main_log(f"[系统护航] 发现 {len(hwnds)} 个底层 CEF 渲染节点，正在发送 COM 唤醒电信号...")
             for h in hwnds:
                 pacc = ctypes.c_void_p()
-                # 强行索要无障碍接口，逼迫 CEF 开始渲染树
                 oleacc.AccessibleObjectFromWindow(h, OBJID_CLIENT, ctypes.byref(IID_IAccessible), ctypes.byref(pacc))
-            
-            # --- 【核心灵魂】给 Chromium 引擎 0.3 秒的时间，把网页 DOM 完全转换映射到内存 ---
             import time
             time.sleep(0.3)
             write_main_log("[系统护航] CEF 唤醒完毕，DOM 树已就绪。")
@@ -148,18 +126,15 @@ def force_wake_up_all_cef():
         write_main_log(f"[系统护航] CEF 强制唤醒失败: {e}")
 
 def disable_os_accessibility():
-    """恢复系统原始状态"""
     global ORIGINAL_SCREEN_READER
     try:
         SPI_SETSCREENREADER = 0x0047
         ctypes.windll.user32.SystemParametersInfoW(
             SPI_SETSCREENREADER, int(ORIGINAL_SCREEN_READER), 0, 2
         )
-        
-        write_main_log("[系统护航] 已关闭 OS 级警报，系统无障碍状态已恢复。") # 替换这行
+        write_main_log("[系统护航] 已关闭 OS 级警报，系统无障碍状态已恢复。") 
     except:
         pass
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -169,52 +144,34 @@ def main():
 
     if DEBUG:
         write_main_log(f"程序启动，接收到的原始参数: {sys.argv}")
-        args = sys.argv[1:]
-        print('@main')
-        print(args)
+        if not is_admin():
+            write_main_log("[环境体检] 警告！当前运行权限: 普通用户 (Standard User)！极可能无法抓取高权限应用！")
 
-        # --- 新增：权限体检 ---
-        if is_admin():
-            write_main_log("[环境体检] 当前运行权限: 管理员 (Administrator) - 权限状态完美。")
-        else:
-            write_main_log("[环境体检] 警告！当前运行权限: 普通用户 (Standard User)！这极可能导致无法抓取高权限应用的 UI 元素！")
-
-    # 1. 功能选择标志
+    # 1. 功能选择标志 (把 hl 和 clk 提为核心互斥命令)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--find", action="store_true", help="探测模式 (F8 抓取信息)")
-    group.add_argument("--get-text", action="store_true", help="获取文本 (调用 hooks/get_text.py)")
-    group.add_argument("--set-act", action="store_true", help="执行动作 (调用 hooks/set_act.py)")
+    group.add_argument("--get", action="store_true", help="获取目标元素的 UI 信息")
     group.add_argument("--if", action="store_true", help="判断元素是否存在 (返回 true/false)")
+    group.add_argument("--hl", action="store_true", help="高亮目标元素")
+    group.add_argument("--clk", action="store_true", help="点击目标元素")
     group.add_argument("--v", action="store_true", help="显示版本号")
 
-    # 2. 位置参数 (xpath, extra)
+    # 2. 位置参数
     parser.add_argument("xpath", nargs="?", help="目标元素的 XPath")
-    parser.add_argument("extra", nargs="?", default="", help="额外参数: get-text下为depth, set-act下为[匹配文本]")
 
-    # 3. 动作与修饰参数 (已修改为 --clk 和 --hl)
-    parser.add_argument("--clk", action="store_true", help="点击动作")
-    parser.add_argument("--hl", action="store_true", help="高亮动作")
-    parser.add_argument("--index", type=int, default=None, help="高亮或点击第N个匹配项（从0开始）")
+    # 3. 修饰参数 (新增 --type 和 --deep)
+    parser.add_argument("--type", type=str, choices=["full", "text"], default="full", help="获取信息的类型")
+    parser.add_argument("--deep", type=int, default=0, help="向下遍历的深度")
+    parser.add_argument("--match", type=str, default=None, help="子元素文本模糊匹配 (支持 * 通配符)") # <--- 新增
+    parser.add_argument("--index", type=int, default=None, help="匹配到的第几个元素 (从1开始)")     # <--- 新增
     parser.add_argument("--timeout", type=float, default=10.0, help="定位超时时间")
 
-    # 处理无参数输入
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(0)
 
     args = parser.parse_args()
 
-    # 冲突校验
-    if args.clk and args.hl:
-        print("错误: --clk 和 --hl 不能同时使用", file=sys.stderr)
-        sys.exit(1)
-
-    if args.set_act and not args.clk and not args.hl:
-        print("错误: --set-act 必须配合 --clk (点击) 或 --hl (高亮) 使用", file=sys.stderr)
-        sys.exit(1)
-
-    # =========================================================
-    # 核心生命周期：在任何 UI 自动化操作前，开启系统级无障碍状态
     # =========================================================
     enable_os_accessibility()
     force_wake_up_all_cef()
@@ -229,41 +186,50 @@ def main():
             print("版本号: ", __version__)
             sys.exit(1)
 
-        elif args.get_text:
+        # --- 新增的获取信息分发 ---
+        elif args.get:
             if not args.xpath:
-                print("错误: --get-text 模式必须提供 xpath", file=sys.stderr)
+                print("错误: --get 必须提供 xpath", file=sys.stderr)
                 sys.exit(1)
-
-            # 解析 depth 参数
-            depth = 1
-            if args.extra and args.extra.isdigit():
-                depth = int(args.extra)
-
-            get_text_hook.run(args.xpath, depth, args.timeout)
-
-        elif args.set_act:
-            if not args.xpath:
-                print("错误: --set-act 模式必须提供 xpath", file=sys.stderr)
-                sys.exit(1)
-
-            set_act_hook.run(
-                xpath=args.xpath,
-                button_text=args.extra,
-                click=args.clk,
-                highlight=args.hl,
-                timeout=args.timeout,
-                index=args.index
+            # 传入新增参数
+            get_hook.run(
+                xpath=args.xpath, 
+                timeout=args.timeout, 
+                get_type=args.type, 
+                deep=args.deep
             )
-        elif getattr(args, "if"):   # 注意：--if 在 argparse 中存储为 args.if
+
+        elif getattr(args, "if"):
             if not args.xpath:
-                if DEBUG: print("错误: --if 需要提供 xpath", file=sys.stderr)
                 sys.exit(1)
             result = el_if_hook.run(args.xpath, args.timeout)
 
-    finally:
-        # 无论程序正常退出还是报错崩溃，务必恢复系统状态！
-        disable_os_accessibility()
+        elif args.hl:
+            if not args.xpath:
+                print("错误: --hl 必须提供 xpath", file=sys.stderr)
+                sys.exit(1)
+            hl_hook.run(
+                xpath=args.xpath, 
+                timeout=args.timeout, 
+                match_pattern=args.match, 
+                deep=args.deep, 
+                index=args.index
+            )
 
+        elif args.clk:
+            if not args.xpath:
+                print("错误: --clk 必须提供 xpath", file=sys.stderr)
+                sys.exit(1)
+            clk_hook.run(
+                xpath=args.xpath, 
+                timeout=args.timeout, 
+                match_pattern=args.match, 
+                deep=args.deep, 
+                index=args.index
+            )
+
+    finally:
+        disable_os_accessibility()
 
 if __name__ == "__main__":
     main()
