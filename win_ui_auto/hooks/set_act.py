@@ -271,13 +271,37 @@ def click_control(ctrl):
     debug_print(f"尝试点击控件: {ctrl.Name or 'Unnamed'} (类型: {ctrl.ControlTypeName})...")
     
     try:
-        # 1. 尝试把最上层窗口拉到前台 (防止窗口在后台导致物理点击点错地方)
+        # ==========================================================
+        # 1. 强力激活最上层窗口 (打破 Windows 后台焦点锁定机制)
+        # ==========================================================
         try:
             top_win = ctrl.GetTopLevelControl()
             if top_win:
+                hwnd = top_win.NativeWindowHandle
+                if hwnd:
+                    user32 = ctypes.windll.user32
+                    
+                    # 检查窗口是否最小化 (IsIconic)，如果是，则恢复它 (SW_RESTORE = 9)
+                    if user32.IsIconic(hwnd):
+                        user32.ShowWindow(hwnd, 9)
+                        time.sleep(0.1)
+                    
+                    # 强制将窗口调到前台并赋予键盘焦点
+                    user32.SetForegroundWindow(hwnd)
+                
+                # UIA 级别的双保险：确保视觉状态正常并尝试激活
+                if hasattr(top_win, 'GetWindowPattern'):
+                    try:
+                        top_win.GetWindowPattern().SetWindowVisualState(auto.WindowVisualState.Normal)
+                    except:
+                        pass
+                
                 top_win.SetActive(waitTime=0.1)
-        except:
-            pass
+                
+                # 给 Windows 系统的窗口动画和前端 DOM 重绘留一点点时间
+                time.sleep(0.2) 
+        except Exception as e:
+            debug_print(f" -> [警告] 尝试激活顶层窗口时出现异常: {e}")
 
         # 2. 物理校验：获取控件真实面积
         rect = ctrl.BoundingRectangle

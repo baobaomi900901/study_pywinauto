@@ -69,13 +69,14 @@ ORIGINAL_SCREEN_READER = False
 
 
 def enable_os_accessibility():
-    """【绝杀1】：向系统广播屏幕阅读器已启动"""
+    """1. 开启系统屏幕阅读器标志"""
     global ORIGINAL_SCREEN_READER
     try:
         user32 = ctypes.windll.user32
-        SPI_GETSCREENREADER = 0x0046
-        SPI_SETSCREENREADER = 0x0047
+        SPI_GETSCREENREADER = 0x0046 # 查询当前系统是否启用了屏幕阅读器
+        SPI_SETSCREENREADER = 0x0047 # 主动设置系统的屏幕阅读器状态
 
+        # 查询当前系统是否开启了屏幕阅读器，并将结果保存到全局变量 ORIGINAL_SCREEN_READER 中，以便程序结束时恢复原状
         current_state = ctypes.c_bool()
         user32.SystemParametersInfoW(SPI_GETSCREENREADER, 0, ctypes.byref(current_state), 0)
         ORIGINAL_SCREEN_READER = current_state.value
@@ -95,14 +96,15 @@ def enable_os_accessibility():
 
 
 def force_wake_up_all_cef():
-    """【绝杀2】：主动向全系统所有可见 CEF 渲染器发送强行唤醒电信号"""
+    """2. 强制唤醒 CEF 渲染窗口"""
     try:
-        user32 = ctypes.windll.user32
-        oleacc = ctypes.windll.oleacc
+        # 第一步：准备底层 API
+        user32 = ctypes.windll.user32 # 负责管窗口
+        oleacc = ctypes.windll.oleacc # 负责管无障碍（Accessibility）接口
         class GUID(ctypes.Structure):
             _fields_ = [("Data1", ctypes.c_ulong), ("Data2", ctypes.c_ushort), ("Data3", ctypes.c_ushort), ("Data4", ctypes.c_ubyte * 8)]
-        IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf, (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71))
-        OBJID_CLIENT = -4
+        IID_IAccessible = GUID(0x618736e0, 0x3c3d, 0x11cf, (0x81, 0x0c, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71)) # UI 无障碍树对象
+        OBJID_CLIENT = -4 # 窗口内部真正用来显示应用核心内容和渲染网页的区域, 存在于 winuser.h
 
         hwnds = []
         def enum_window_proc(hwnd, lParam):
