@@ -99,7 +99,6 @@ def detect_automation_type(control):
         elif has_legacy and not has_uia_patterns:
             return "MSAA"
         elif has_legacy and has_uia_patterns:
-            # 同时拥有，通常优先认为是 UIA
             try:
                 class_name = control.ClassName
                 if class_name and class_name.startswith("WindowsForms10."):
@@ -110,7 +109,6 @@ def detect_automation_type(control):
                 pass
             return "UIA"
         else:
-            # 没有任何模式，尝试通过窗口类名启发
             try:
                 hwnd = control.NativeWindowHandle
                 if hwnd:
@@ -139,11 +137,29 @@ def get_control_info(control, x, y, current_pid):
             return None
         x0, y0, w, h = rect.left, rect.top, rect.width(), rect.height()
 
+        # 增强信息提取：优先使用 LegacyIAccessible 的 Name / Value
+        legacy_name = ""
+        legacy_value = ""
         try:
-            value_pattern = control.GetValuePattern()
-            value = value_pattern.Value if value_pattern else ""
+            legacy = control.GetLegacyIAccessiblePattern()
+            if legacy:
+                legacy_name = legacy.Name or ""
+                legacy_value = legacy.Value or ""
         except:
-            value = ""
+            pass
+
+        # UIA 标准属性
+        ctrl_name = control.Name or legacy_name or ""
+        ctrl_class = control.ClassName or ""
+
+        # Value 获取优先级：LegacyValue > ValuePattern > ""
+        value = legacy_value
+        if not value:
+            try:
+                value_pattern = control.GetValuePattern()
+                value = value_pattern.Value if value_pattern else ""
+            except:
+                value = ""
 
         try:
             help_text = control.HelpText or ""
@@ -157,6 +173,7 @@ def get_control_info(control, x, y, current_pid):
 
         ctrl_type = control.ControlTypeName or ""
 
+        # 计算索引
         my_index = 0
         my_same_type_index = 0
         try:
@@ -174,6 +191,7 @@ def get_control_info(control, x, y, current_pid):
         except:
             pass
 
+        # 构建父链
         parent_chain = []
         app_info = None
         node = control.GetParentControl()
@@ -213,22 +231,23 @@ def get_control_info(control, x, y, current_pid):
             parent_chain.insert(0, node_info)
             node = node.GetParentControl()
 
-        # 生成当前控件的字典（用于xpath生成）
+        # 构建当前控件信息字典
         current_info = {
             "ControlType": ctrl_type,
-            "ClassName": control.ClassName or "",
-            "Name": control.Name or "",
+            "ClassName": ctrl_class,
+            "Name": ctrl_name,
             "index": my_index,
             "same_type_index": my_same_type_index
         }
+
         xpath_str = generate_xpath(current_info, parent_chain)
 
-        # 生成自动化类型
         automation_type = detect_automation_type(control)
+
         info = {
             "ControlType": ctrl_type,
-            "ClassName": control.ClassName or "",
-            "Name": control.Name or "",
+            "ClassName": ctrl_class,
+            "Name": ctrl_name,
             "position": [x0, y0, w, h],
             "Value": value,
             "HelpText": help_text,
@@ -236,11 +255,10 @@ def get_control_info(control, x, y, current_pid):
             "index": my_index,
             "same_type_index": my_same_type_index,
             "parent": parent_chain,
-            # ⭐ 新顺序从这里开始
-            "raw_xpath": xpath_str,           # 1️⃣ 原始路径（未经优化）
-            "xpath": xpath_str,               # 2️⃣ 净化后的路径（暂同原始）
-            "application": app_info if app_info else {},   # 3️⃣ 进程信息（若无可设为空对象）
-            "automation_type": automation_type # 4️⃣ 自动化类型
+            "raw_xpath": xpath_str,
+            "xpath": xpath_str,
+            "application": app_info if app_info else {},
+            "automation_type": automation_type
         }
         return info
     except Exception:
@@ -268,6 +286,5 @@ def write_control_info_to_file(info, filepath="el.json"):
     try:
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(info, f, ensure_ascii=False, indent=2)
-        # print(f"→ 信息已写入 {filepath}")
     except Exception as e:
         print(f"→ 写入文件失败: {e}")

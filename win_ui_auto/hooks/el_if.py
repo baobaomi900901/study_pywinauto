@@ -23,11 +23,11 @@ def run(xpath, timeout=10.0):
                 rect = el.BoundingRectangle
                 if rect and rect.width() > 0 and rect.height() > 0:
                     # 发现有效控件，输出唯一标准的成功标志
-                    print("true")
+                    print("True")
                     return True
             
             # 走到这里说明定位失败或控件无效
-            print("false")
+            print("False")
             return False
             
     except Exception:

@@ -5,6 +5,7 @@ import fnmatch
 import ctypes
 import uiautomation as auto
 from hooks.locator import locate_by_xpath
+from constants import DEBUG
 
 def force_focus_window(el):
     """强制将控件所属的顶层窗口置顶并恢复显示"""
@@ -66,13 +67,17 @@ def run(xpath, timeout=10.0, match_pattern=None, deep=0, index=None):
     # 1. 定位基准
     base_el = locate_by_xpath(xpath, timeout)
     if not base_el:
-        print(f"\n❌ 最终结果：未找到基准元素。")
+        if DEBUG:
+            print(f"\n❌ 最终结果：未找到基准元素。")
+        print(False)
+        return False
         sys.exit(1)
 
     # 2. 查找目标
     final_targets = []
     if match_pattern:
-        print(f"[*] 正在基准元素下搜索匹配 '{match_pattern}' 的子元素...")
+        if DEBUG:
+            print(f"[*] 正在基准元素下搜索匹配 '{match_pattern}' 的子元素...")
         final_targets = find_matches_recursive(base_el, match_pattern, deep)
     else:
         final_targets = [base_el]
@@ -95,18 +100,24 @@ def run(xpath, timeout=10.0, match_pattern=None, deep=0, index=None):
         target_to_click = final_targets[0]
 
     # 4. 【核心强化】执行点击前置动作：置顶
-    print(f"[*] 正在激活目标窗口并置顶...")
+    if DEBUG:
+        print(f"[*] 正在激活目标窗口并置顶...")
     force_focus_window(target_to_click)
 
     # 5. 执行点击
     try:
         rect = target_to_click.BoundingRectangle
-        print(f"✅ 准备点击: [{target_to_click.ControlTypeName}] {target_to_click.Name} @ ({rect.left + rect.width()//2}, {rect.top + rect.height()//2})")
+        if DEBUG:
+            print(f"✅ 准备点击: [{target_to_click.ControlTypeName}] {target_to_click.Name} @ ({rect.left + rect.width()//2}, {rect.top + rect.height()//2})")
         
         # 使用 Click() 会模拟物理点击，如果元素被遮挡有时会失效
         # 建议先移动再点击，或者直接调用 Pattern 的 Invoke
         target_to_click.Click(simulateMove=False)
-        print("[+] 点击指令发送成功。")
+        if DEBUG:
+            print("[+] 点击指令发送成功。")
+        print(True) 
+        return True
+    
     except Exception as e:
         print(f"❌ 点击失败: {e}")
         sys.exit(1)
