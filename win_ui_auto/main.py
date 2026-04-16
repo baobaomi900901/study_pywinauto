@@ -24,7 +24,7 @@ from ctypes import wintypes
 import datetime
 from constants import DEBUG
 
-__version__ = 19.0
+__version__ = "v1.0.0.0"
 
 def is_admin():
     """检查当前是否以管理员权限运行"""

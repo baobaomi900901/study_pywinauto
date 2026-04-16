@@ -157,7 +157,7 @@ class UIProbe:
                             r = tk.Tk()
                             r.withdraw()
                             r.clipboard_clear()
-                            r.clipboard_append(info['xpath'])
+                            r.clipboard_append(f'"{info["xpath"]}"')
                             r.update()
                             r.destroy()
                             print("\n🌟 [神级辅助] XPath 已自动复制到您的系统剪贴板！直接 Ctrl+V 即可使用！")
