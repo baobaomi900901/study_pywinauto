@@ -1,5 +1,4 @@
 # nuitka-project: --standalone
-# nuitka-project: --onefile
 # nuitka-project: --remove-output
 # nuitka-project: --no-pyi-file
 # nuitka-project: --output-dir=build

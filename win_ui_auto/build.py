@@ -19,7 +19,7 @@ def generate_version_file(version: str) -> Path:
     """构建前生成 _version.py"""
     version_file = ROOT / "_version.py"
     version_file.write_text(f'__version__ = "{version}"\n', encoding="utf-8")
-    print(f"✅ 已生成 _version.py ({version})")
+    print(f"[build] 已生成 _version.py ({version})")
     return version_file
 
 def build_exe(name, version: str):
@@ -29,7 +29,6 @@ def build_exe(name, version: str):
     cmd = [
         "uv", "run", "python", "-m",
         "nuitka",
-        "--mingw64",
         "--assume-yes-for-downloads",
         f"--product-name={name}",
         f"--file-version={version}",
@@ -39,7 +38,7 @@ def build_exe(name, version: str):
 
     subprocess.run(cmd, check=True)
 
-    print(f"🎉 Nuitka 打包完成")
+    print("[build] Nuitka 打包完成")
 
 def main():
     package_name, version = get_version()
@@ -48,7 +47,7 @@ def main():
         build_exe(package_name, version)
     finally:
         ver_file.unlink(missing_ok=True)
-        print("🗑️  已删除 _version.py")
+        print("[build] 已删除 _version.py")
 
 
 if __name__ == "__main__":
