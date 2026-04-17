@@ -18,11 +18,31 @@ def run(xpath, timeout=10.0):
             el = locate_by_xpath(xpath, timeout=timeout)
 
             if el:
-                # 进一步验证：确保控件在屏幕上有真实的物理尺寸
-                # 很多正在关闭的窗口虽然对象还在内存里，但宽高已变为 0
-                rect = el.BoundingRectangle
+                # 强制刷新一次，避免拿到 UIA 缓存的“幽灵对象”
+                try:
+                    el.Refresh()
+                except Exception:
+                    pass
+
+                # 进一步验证：必须“存在 + 有物理尺寸”
+                # 说明：
+                # - 仅靠 locate_by_xpath 可能拿到 UIA 缓存对象；这里用 Exists 做二次确认
+                # - IsOffscreen 在 CEF/MSAA 场景很容易误判（窗口不前台、被遮挡、渲染策略等），不作为否定条件
+                try:
+                    if not el.Exists(0.8, 0.1):
+                        print("False")
+                        return False
+                except Exception:
+                    # Exists 异常时不作为直接失败条件，继续用 BoundingRectangle 判断
+                    pass
+
+                rect = None
+                try:
+                    rect = el.BoundingRectangle
+                except Exception:
+                    rect = None
+
                 if rect and rect.width() > 0 and rect.height() > 0:
-                    # 发现有效控件，输出唯一标准的成功标志
                     print("True")
                     return True
             
@@ -32,7 +52,7 @@ def run(xpath, timeout=10.0):
             
     except Exception:
         # 任何异常（如 COM 错误）统一视为不存在
-        print("false")
+        print("False")
         return False
 
 def main():

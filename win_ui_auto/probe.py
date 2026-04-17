@@ -171,6 +171,13 @@ class UIProbe:
                     write_control_info_to_file(info)
                     # print("→ 信息已写入 el.json")
                     # print("→ 信息已打印")
+
+                    # 打印成功后自动退出探测模式，避免误触连续抓取
+                    self.inspect_mode = False
+                    self.highlight.clear()
+                    with self.control_lock:
+                        self.current_control = None
+                    print("\n[探测模式] 已自动关闭（如需继续探测请输入 1 重新开启）")
                 else:
                     print("→ 获取控件信息失败")
             else:

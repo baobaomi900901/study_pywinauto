@@ -162,7 +162,14 @@ def main():
     # 3. 修饰参数 (新增 --type 和 --deep)
     parser.add_argument("--type", type=str, choices=["full", "text"], default="full", help="获取信息的类型")
     parser.add_argument("--deep", type=int, default=0, help="向下遍历的深度")
-    parser.add_argument("--match", type=str, default=None, help="子元素文本模糊匹配 (支持 * 通配符)") # <--- 新增
+    parser.add_argument(
+        "--match",
+        "--master",
+        dest="match",
+        type=str,
+        default=None,
+        help="子元素文本模糊匹配 (支持 * 通配符)"
+    )
     parser.add_argument("--index", type=int, default=None, help="匹配到的第几个元素 (从1开始)")     # <--- 新增
     parser.add_argument("--timeout", type=float, default=10.0, help="定位超时时间")
 

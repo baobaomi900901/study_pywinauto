@@ -236,8 +236,11 @@ def get_control_info(control, x, y, current_pid):
             "ControlType": ctrl_type,
             "ClassName": ctrl_class,
             "Name": ctrl_name,
+            "AutomationId": control.AutomationId or "",
             "index": my_index,
-            "same_type_index": my_same_type_index
+            "same_type_index": my_same_type_index,
+            # xpath_generator 需要用到进程锁（ProcessName），这里把 application 信息透传进去
+            "application": app_info if app_info else {}
         }
 
         xpath_str = generate_xpath(current_info, parent_chain)
