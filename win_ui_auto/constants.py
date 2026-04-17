@@ -5,3 +5,9 @@ QUEUE_TIMEOUT = 0.1        # 队列超时
 LOOP_SLEEP = 0.03          # UI探测循环睡眠时间
 NON_INSPECT_SLEEP = 0.1    # 非探查模式下的睡眠时间
 DEBUG = False              # 调试输出开关
+
+# 探查模式：鼠标静止超过该秒数自动退出
+INSPECT_MOUSE_IDLE_TIMEOUT_SECONDS = 10.0
+
+# 高亮框扩展像素：防止边缘点击命中不稳
+HIGHLIGHT_PADDING_PX = 2

@@ -23,6 +23,29 @@ from ctypes import wintypes
 import datetime
 from constants import DEBUG
 
+
+def _configure_utf8_console():
+    """
+    让 Windows 控制台输出更稳定（避免默认 GBK 导致 UnicodeEncodeError/乱码）。
+    - 优先 reconfigure stdout/stderr 为 UTF-8
+    - 在 Windows 上尝试把 Console CodePage 切到 65001（失败则忽略）
+    """
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+    try:
+        if os.name == "nt":
+            kernel32 = ctypes.windll.kernel32
+            kernel32.SetConsoleOutputCP(65001)
+            kernel32.SetConsoleCP(65001)
+    except Exception:
+        pass
+
 try:
     from _version import __version__
 except ImportError:
@@ -137,6 +160,7 @@ def disable_os_accessibility():
         pass
 
 def main():
+    _configure_utf8_console()
     parser = argparse.ArgumentParser(
         description="Win UI Automation 统一调度工具",
         formatter_class=argparse.RawDescriptionHelpFormatter

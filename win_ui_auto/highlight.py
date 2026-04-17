@@ -3,6 +3,7 @@ import threading
 import queue
 import tkinter as tk
 import time
+from constants import HIGHLIGHT_PADDING_PX
 
 
 class HighlightWindow:
@@ -87,6 +88,12 @@ class HighlightWindow:
         self.root.mainloop()
 
     def update(self, x, y, width, height):
+        pad = int(HIGHLIGHT_PADDING_PX or 0)
+        if pad > 0:
+            x = int(x) - pad
+            y = int(y) - pad
+            width = int(width) + pad * 2
+            height = int(height) + pad * 2
         self.queue.put({'action': 'update', 'x': x, 'y': y, 'width': width, 'height': height})
 
     def clear(self):

@@ -150,8 +150,11 @@ def locate_by_xpath(xpath, timeout=10.0):
         ctype_name = ctype_name + "Control" if not ctype_name.endswith("Control") else ctype_name
         
         attrs = {}
-        for attr_match in re.finditer(r"\[@([a-zA-Z0-9_]+)=['\"]([^'\"]+)['\"]\]", seg):
-            attrs[attr_match.group(1)] = _unescape_xpath_string(attr_match.group(2))
+        # 兼容以下两种写法：
+        # 1) Window[@ClassName='Notepad'][@ProcessName='Notepad.exe']
+        # 2) Window[@ClassName='Notepad' and @ProcessName='Notepad.exe']
+        for attr_match in re.finditer(r"@([a-zA-Z0-9_]+)\s*=\s*(['\"])(.*?)\2", seg):
+            attrs[attr_match.group(1)] = _unescape_xpath_string(attr_match.group(3))
             
         index = 1
         idx_match = re.search(r"\[(\d+)\]$", seg)
