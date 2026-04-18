@@ -8,6 +8,36 @@ MAX_PATH = 260
 
 kernel32 = ctypes.windll.kernel32
 psapi = ctypes.windll.psapi
+user32 = ctypes.windll.user32
+
+
+def hwnd_c_void_p(hwnd):
+    """把 Python 里的 HWND 整型包装为 ctypes.c_void_p，避免 64 位句柄被当成 c_int 溢出。"""
+    if hwnd is None:
+        return ctypes.c_void_p(None)
+    if isinstance(hwnd, ctypes.c_void_p):
+        return hwnd
+    try:
+        v = int(hwnd)
+    except (TypeError, ValueError):
+        return ctypes.c_void_p(None)
+    if v == 0:
+        return ctypes.c_void_p(None)
+    return ctypes.c_void_p(v)
+
+
+def get_window_class_name(hwnd) -> str:
+    """读取窗口类名（64 位 HWND 安全）。"""
+    hp = hwnd_c_void_p(hwnd)
+    if not hp.value:
+        return ""
+    buf = ctypes.create_unicode_buffer(256)
+    try:
+        n = user32.GetClassNameW(hp, buf, 256)
+        return buf.value if n else ""
+    except Exception:
+        return ""
+
 
 def get_process_name(pid):
     """通过 PID 获取进程名称（带缓存）"""

@@ -2,8 +2,8 @@
 import uiautomation as auto
 import json
 import time
-from process_utils import get_process_name
-from xpath_generator import generate_xpath
+from process_utils import get_process_name, get_window_class_name
+from xpath_generator import generate_xpath, CAPTURE_OVERLAY_CLASS
 
 
 def is_highlight_window(ctrl, current_pid):
@@ -31,16 +31,29 @@ def is_same_control(ctrl1, ctrl2):
         return ctrl1 == ctrl2
 
 
+def is_capture_overlay(ctrl):
+    """本工具 Ctrl 探测全屏遮罩；命中时应忽略并回退到悬停缓存的控件。"""
+    try:
+        return (ctrl.ClassName or "") == CAPTURE_OVERLAY_CLASS
+    except Exception:
+        return False
+
+
 def get_deepest_control(x, y, current_pid):
     try:
-        ctrl = auto.ControlFromPoint(x, y)
-        if not ctrl or is_highlight_window(ctrl, current_pid):
+        xi, yi = int(x), int(y)
+        try:
+            ctrl = auto.ControlFromPoint(xi, yi)
+        except OverflowError:
+            # 部分环境 ElementFromPoint(POINT) 会 ctypes 溢出；改用 HWND 路径
+            ctrl = auto.ControlFromPoint2(xi, yi)
+        if not ctrl or is_highlight_window(ctrl, current_pid) or is_capture_overlay(ctrl):
             return None
         while True:
             children = ctrl.GetChildren()
             found_deeper = False
             for child in children:
-                if is_highlight_window(child, current_pid):
+                if is_highlight_window(child, current_pid) or is_capture_overlay(child):
                     continue
                 rect = child.BoundingRectangle
                 if rect and rect.left <= x <= rect.right and rect.top <= y <= rect.bottom:
@@ -112,11 +125,7 @@ def detect_automation_type(control):
             try:
                 hwnd = control.NativeWindowHandle
                 if hwnd:
-                    import ctypes
-                    user32 = ctypes.windll.user32
-                    buf = ctypes.create_unicode_buffer(256)
-                    user32.GetClassNameW(hwnd, buf, 256)
-                    class_name = buf.value
+                    class_name = get_window_class_name(hwnd)
                     if class_name in ["Button", "Edit", "Static", "ListBox", "ComboBox",
                                       "#32770", "Notepad", "CalcFrame"]:
                         return "MSAA"
@@ -268,7 +277,7 @@ def get_control_info(control, x, y, current_pid):
         return None
 
 
-def print_control_info(info, last_printed_id, last_print_time, interval=0.1):
+def print_control_info(info, last_printed_id, last_print_time, interval=0.1, force=False):
     if not info:
         return last_printed_id, last_print_time
     pos = info["position"]
@@ -276,7 +285,7 @@ def print_control_info(info, last_printed_id, last_print_time, interval=0.1):
                info.get("index"), info.get("same_type_index"),
                round(pos[0] / 5) * 5, round(pos[1] / 5) * 5)
     now = time.time()
-    if ctrl_id != last_printed_id or now - last_print_time > interval:
+    if force or ctrl_id != last_printed_id or now - last_print_time > interval:
         print(f"\n[UI 信息]\n{json.dumps(info, ensure_ascii=False, indent=2)}")
         return ctrl_id, now
     return last_printed_id, last_print_time

@@ -1,10 +1,21 @@
 import ctypes
+import traceback
+import time
 from ctypes import wintypes
 import threading
 
 
 user32 = ctypes.windll.user32
 kernel32 = ctypes.windll.kernel32
+
+# 64 位下真实 HWND 可能超过 2^31-1，不能用 c_long 承载，否则 ShowWindow/SetWindowLongW 报 OverflowError
+HWND_PTR = ctypes.c_void_p
+
+
+def _hwnd_ptr(h):
+    if h is None:
+        return HWND_PTR(None)
+    return HWND_PTR(int(h))
 
 
 WS_POPUP = 0x80000000
@@ -16,11 +27,14 @@ WS_EX_TRANSPARENT = 0x00000020
 SW_SHOW = 5
 SW_HIDE = 0
 
+WM_CLOSE = 0x0010
 WM_DESTROY = 0x0002
 WM_LBUTTONDOWN = 0x0201
 WM_KEYDOWN = 0x0100
 WM_TIMER = 0x0113
 WM_APP = 0x8000
+# 由其它线程调用 show() 时，通过 SendMessage 在创建 HWND 的线程里执行 SetWindowLong（避免跨线程无效）
+WM_WUIA_OVERLAY_APPLY_SOLID = WM_APP + 63
 
 VK_CONTROL = 0x11
 
@@ -55,9 +69,10 @@ def _get_virtual_screen_rect():
 
 class CaptureOverlay:
     """
-    全屏透明遮罩窗口：
-    - 探测模式开启时显示，吃掉所有鼠标点击（目标应用收不到）
-    - Ctrl + 左键时触发 on_capture()
+    全屏透明遮罩（仅探查开启且按住 Ctrl 时存在 HWND）：
+    - 松开 Ctrl：立即 DestroyWindow，不在 UIA 树中残留 WinUiAuto_CaptureOverlay
+    - 按住 Ctrl：创建/显示遮罩并拦截；Ctrl+左键触发 on_capture()
+    - hide/show：仅 SW_HIDE/SW_SHOW，供悬停命中测试短暂移开遮罩，不销毁窗口
     """
 
     def __init__(self, is_enabled, on_capture, debug_print=None):
@@ -77,16 +92,22 @@ class CaptureOverlay:
         user32.GetKeyState.argtypes = [ctypes.c_int]
         user32.GetKeyState.restype = wintypes.SHORT
 
-        user32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+        user32.DefWindowProcW.argtypes = [HWND_PTR, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
         user32.DefWindowProcW.restype = LRESULT
 
-        user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+        user32.ShowWindow.argtypes = [HWND_PTR, ctypes.c_int]
         user32.ShowWindow.restype = wintypes.BOOL
 
-        user32.SetLayeredWindowAttributes.argtypes = [wintypes.HWND, wintypes.COLORREF, wintypes.BYTE, wintypes.DWORD]
+        user32.ShowWindowAsync.argtypes = [HWND_PTR, ctypes.c_int]
+        user32.ShowWindowAsync.restype = wintypes.BOOL
+
+        user32.SendMessageW.argtypes = [HWND_PTR, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+        user32.SendMessageW.restype = LRESULT
+
+        user32.SetLayeredWindowAttributes.argtypes = [HWND_PTR, wintypes.COLORREF, wintypes.BYTE, wintypes.DWORD]
         user32.SetLayeredWindowAttributes.restype = wintypes.BOOL
 
-        user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+        user32.PostMessageW.argtypes = [HWND_PTR, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
         user32.PostMessageW.restype = wintypes.BOOL
 
         user32.GetMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND, wintypes.UINT, wintypes.UINT]
@@ -98,13 +119,13 @@ class CaptureOverlay:
         user32.DispatchMessageW.argtypes = [ctypes.POINTER(wintypes.MSG)]
         user32.DispatchMessageW.restype = user32.DefWindowProcW.restype
 
-        user32.GetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int]
+        user32.GetWindowLongW.argtypes = [HWND_PTR, ctypes.c_int]
         user32.GetWindowLongW.restype = ctypes.c_long
-        user32.SetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_long]
+        user32.SetWindowLongW.argtypes = [HWND_PTR, ctypes.c_int, ctypes.c_long]
         user32.SetWindowLongW.restype = ctypes.c_long
         user32.SetWindowPos.argtypes = [
-            wintypes.HWND,
-            wintypes.HWND,
+            HWND_PTR,
+            HWND_PTR,
             ctypes.c_int,
             ctypes.c_int,
             ctypes.c_int,
@@ -115,10 +136,13 @@ class CaptureOverlay:
 
         # wintypes 在不同 Python/Windows 版本下不一定有 UINT_PTR，这里用 size_t 兼容
         UINT_PTR = ctypes.c_size_t
-        user32.SetTimer.argtypes = [wintypes.HWND, UINT_PTR, wintypes.UINT, wintypes.LPVOID]
+        user32.SetTimer.argtypes = [HWND_PTR, UINT_PTR, wintypes.UINT, wintypes.LPVOID]
         user32.SetTimer.restype = UINT_PTR
-        user32.KillTimer.argtypes = [wintypes.HWND, UINT_PTR]
+        user32.KillTimer.argtypes = [HWND_PTR, UINT_PTR]
         user32.KillTimer.restype = wintypes.BOOL
+
+        user32.DestroyWindow.argtypes = [HWND_PTR]
+        user32.DestroyWindow.restype = wintypes.BOOL
 
     def start(self):
         if self._thread and self._thread.is_alive():
@@ -131,9 +155,11 @@ class CaptureOverlay:
 
     def stop(self):
         self._stop.set()
-        if self._hwnd:
+        h = self._hwnd
+        if h:
             try:
-                user32.PostMessageW(self._hwnd, WM_DESTROY, 0, 0)
+                # 必须在创建 HWND 的线程里 DestroyWindow；跨线程投递 WM_CLOSE 由 wndproc 销毁
+                user32.PostMessageW(_hwnd_ptr(h), WM_CLOSE, 0, 0)
             except Exception:
                 pass
         try:
@@ -143,12 +169,17 @@ class CaptureOverlay:
             pass
 
     def show(self):
-        if self._hwnd:
-            user32.ShowWindow(self._hwnd, SW_SHOW)
+        """可从任意线程调用：ShowWindowAsync + SendMessage 在遮罩线程上摘掉 WS_EX_TRANSPARENT。"""
+        if not self._hwnd:
+            return
+        hp = _hwnd_ptr(self._hwnd)
+        user32.ShowWindowAsync(hp, SW_SHOW)
+        user32.SendMessageW(hp, WM_WUIA_OVERLAY_APPLY_SOLID, 0, 0)
 
     def hide(self):
+        """可从任意线程调用：异步隐藏，避免 UIA 线程直接 ShowWindow 导致仍命中全屏遮罩。"""
         if self._hwnd:
-            user32.ShowWindow(self._hwnd, SW_HIDE)
+            user32.ShowWindowAsync(_hwnd_ptr(self._hwnd), SW_HIDE)
 
     def _ctrl_down(self) -> bool:
         try:
@@ -159,16 +190,21 @@ class CaptureOverlay:
     def _set_click_through(self, hwnd, enabled: bool):
         """enabled=True: 鼠标穿透（普通点击直接落到目标应用）"""
         try:
-            ex_style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+            hp = _hwnd_ptr(hwnd)
+            ex_raw = int(user32.GetWindowLongW(hp, GWL_EXSTYLE))
+            ex_u = ex_raw & 0xFFFFFFFF
             if enabled:
-                new_style = ex_style | WS_EX_TRANSPARENT
+                new_u = ex_u | WS_EX_TRANSPARENT
             else:
-                new_style = ex_style & (~WS_EX_TRANSPARENT)
-            if new_style == ex_style:
+                new_u = ex_u & (~WS_EX_TRANSPARENT) & 0xFFFFFFFF
+            if new_u == ex_u:
                 return
-            user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_style)
+            # SetWindowLongW 第三参为有符号 LONG，需把 DWORD 样式折叠到 32 位有符号范围
+            new_signed = new_u if new_u < 0x80000000 else new_u - 0x100000000
+            user32.SetWindowLongW(hp, GWL_EXSTYLE, new_signed)
             user32.SetWindowPos(
-                hwnd,
+                hp,
+                HWND_PTR(None),
                 0,
                 0,
                 0,
@@ -186,7 +222,7 @@ class CaptureOverlay:
 
         WNDPROCTYPE = ctypes.WINFUNCTYPE(
             user32.DefWindowProcW.restype,
-            wintypes.HWND,
+            HWND_PTR,
             wintypes.UINT,
             wintypes.WPARAM,
             wintypes.LPARAM,
@@ -194,6 +230,14 @@ class CaptureOverlay:
 
         def wndproc(hwnd, msg, wparam, lparam):
             try:
+                if msg == WM_CLOSE:
+                    user32.DestroyWindow(_hwnd_ptr(hwnd))
+                    return 0
+
+                if msg == WM_WUIA_OVERLAY_APPLY_SOLID:
+                    self._set_click_through(hwnd, False)
+                    return 0
+
                 if msg == WM_TIMER and wparam == TIMER_ID_CTRL:
                     enabled = False
                     try:
@@ -201,25 +245,20 @@ class CaptureOverlay:
                     except Exception:
                         enabled = False
 
-                    # 设计目标：
-                    # - 探查模式开启时：只有按住 Ctrl 才出现遮罩并拦截点击（目标应用不触发点击）
-                    # - 未按 Ctrl：遮罩隐藏，不影响目标应用的任何点击
-                    if enabled and self._ctrl_down():
+                    want_overlay = (not self._stop.is_set()) and enabled and self._ctrl_down()
+                    if want_overlay:
                         try:
-                            user32.ShowWindow(hwnd, SW_SHOW)
+                            user32.ShowWindow(_hwnd_ptr(hwnd), SW_SHOW)
                         except Exception:
                             pass
-                        # 显示时需要拦截点击
                         if self._click_through:
                             self._set_click_through(hwnd, False)
                     else:
-                        # 未启用或未按 Ctrl：隐藏遮罩并保持穿透
+                        # 松开 Ctrl 或关闭探查：销毁 HWND，避免长期占位 UIA / 误抓 XPath
                         try:
-                            user32.ShowWindow(hwnd, SW_HIDE)
+                            user32.DestroyWindow(_hwnd_ptr(hwnd))
                         except Exception:
                             pass
-                        if not self._click_through:
-                            self._set_click_through(hwnd, True)
                     return 0
 
                 if msg == WM_LBUTTONDOWN:
@@ -234,16 +273,21 @@ class CaptureOverlay:
                         try:
                             self._on_capture()
                         except Exception:
-                            pass
+                            try:
+                                self._debug(traceback.format_exc())
+                            except Exception:
+                                pass
                         return 0
 
                 if msg == WM_DESTROY:
                     try:
                         try:
-                            user32.KillTimer(hwnd, TIMER_ID_CTRL)
+                            user32.KillTimer(_hwnd_ptr(hwnd), TIMER_ID_CTRL)
                         except Exception:
                             pass
-                        user32.PostQuitMessage(0)
+                        self._hwnd = None
+                        if self._stop.is_set():
+                            user32.PostQuitMessage(0)
                     except Exception:
                         pass
                     return 0
@@ -286,47 +330,64 @@ class CaptureOverlay:
             # 已注册也没关系
             pass
 
+        self._ready.set()
+
         x, y, w, h = _get_virtual_screen_rect()
         ex_style = WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_LAYERED
         style = WS_POPUP
 
-        hwnd = user32.CreateWindowExW(
-            ex_style,
-            class_name,
-            "CaptureOverlay",
-            style,
-            x,
-            y,
-            w,
-            h,
-            0,
-            0,
-            h_instance,
-            0,
-        )
-
-        self._hwnd = hwnd
-        # 1% 不透明度：几乎不可见，但仍能接收鼠标事件
-        LWA_ALPHA = 0x2
-        user32.SetLayeredWindowAttributes(hwnd, 0, 1, LWA_ALPHA)
-
-        # 默认鼠标穿透：不影响目标应用正常点击（仅 Ctrl+点击才需要拦截）
-        self._set_click_through(hwnd, True)
-
-        # 定时检测 Ctrl 状态以动态切换穿透
-        try:
-            user32.SetTimer(hwnd, TIMER_ID_CTRL, TIMER_INTERVAL_MS, 0)
-        except Exception:
-            pass
-
-        user32.ShowWindow(hwnd, SW_HIDE)
-        self._ready.set()
-
-        msg = wintypes.MSG()
         while not self._stop.is_set():
-            r = user32.GetMessageW(ctypes.byref(msg), 0, 0, 0)
-            if r == 0 or r == -1:
+            while not self._stop.is_set():
+                try:
+                    if bool(self._is_enabled()) and self._ctrl_down():
+                        break
+                except Exception:
+                    pass
+                time.sleep(0.02)
+
+            if self._stop.is_set():
                 break
-            user32.TranslateMessage(ctypes.byref(msg))
-            user32.DispatchMessageW(ctypes.byref(msg))
+
+            hwnd = user32.CreateWindowExW(
+                ex_style,
+                class_name,
+                "CaptureOverlay",
+                style,
+                x,
+                y,
+                w,
+                h,
+                0,
+                0,
+                h_instance,
+                0,
+            )
+            if not hwnd:
+                time.sleep(0.05)
+                continue
+
+            self._hwnd = hwnd
+            LWA_ALPHA = 0x2
+            hp = _hwnd_ptr(hwnd)
+            user32.SetLayeredWindowAttributes(hp, 0, 1, LWA_ALPHA)
+            self._set_click_through(hwnd, False)
+            try:
+                user32.SetTimer(hp, TIMER_ID_CTRL, TIMER_INTERVAL_MS, 0)
+            except Exception:
+                pass
+            user32.ShowWindow(hp, SW_SHOW)
+
+            msg = wintypes.MSG()
+            while not self._stop.is_set():
+                r = user32.GetMessageW(ctypes.byref(msg), 0, 0, 0)
+                if r == 0:
+                    break
+                if r == -1:
+                    break
+                user32.TranslateMessage(ctypes.byref(msg))
+                user32.DispatchMessageW(ctypes.byref(msg))
+                if not self._hwnd:
+                    break
+
+            self._hwnd = None
 

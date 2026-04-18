@@ -1,11 +1,11 @@
 [project]
 name = "win-ui-auto"
-version = "2.0.2.2"
+version = "2.1.0.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "nuitka[onefile]>=4.0.7",
+    "nuitka>=4.0.7",
     "psutil>=7.2.2",
     "pynput>=1.8.1",
     "uiautomation>=2.0.29",

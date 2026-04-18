@@ -72,7 +72,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-# 导入 Hooks 模块 (已移除 set_act_hook，引入 hl_hook 和 clk_hook)
+from process_utils import get_window_class_name, hwnd_c_void_p
+
+# 导入 Hooks 模块（get / el_if / hl / clk）
 try:
     from hooks import get as get_hook
     from hooks import el_if as el_if_hook
@@ -116,30 +118,35 @@ def force_wake_up_all_cef():
 
         hwnds = []
         def enum_window_proc(hwnd, lParam):
-            buf = ctypes.create_unicode_buffer(256)
-            user32.GetClassNameW(hwnd, buf, 256)
-            if "Chrome_RenderWidgetHostHWND" in buf.value or "Render" in buf.value:
-                if user32.IsWindowVisible(hwnd):
+            cn = get_window_class_name(hwnd)
+            if "Chrome_RenderWidgetHostHWND" in cn or "Render" in cn:
+                hp = hwnd_c_void_p(hwnd)
+                if hp.value and user32.IsWindowVisible(hp):
                     pid = ctypes.c_ulong()
-                    user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+                    user32.GetWindowThreadProcessId(hp, ctypes.byref(pid))
                     import psutil
                     try:
                         proc = psutil.Process(pid.value)
                         proc_name = proc.name().lower()
                         if "ideal.exe" in proc_name or "wxwork" in proc_name:
-                            hwnds.append(hwnd)
-                    except:
+                            hwnds.append(int(hp.value))
+                    except Exception:
                         pass
             return True
 
-        EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+        EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, wintypes.LPARAM)
         user32.EnumChildWindows(0, EnumWindowsProc(enum_window_proc), 0)
 
         if hwnds:
             write_main_log(f"[系统护航] 发现 {len(hwnds)} 个底层 CEF 渲染节点，正在发送 COM 唤醒电信号...")
             for h in hwnds:
                 pacc = ctypes.c_void_p()
-                oleacc.AccessibleObjectFromWindow(h, OBJID_CLIENT, ctypes.byref(IID_IAccessible), ctypes.byref(pacc))
+                oleacc.AccessibleObjectFromWindow(
+                    hwnd_c_void_p(h),
+                    ctypes.c_uint(0xFFFFFFFC),
+                    ctypes.byref(IID_IAccessible),
+                    ctypes.byref(pacc),
+                )
             import time
             time.sleep(0.3)
             write_main_log("[系统护航] CEF 唤醒完毕，DOM 树已就绪。")
@@ -172,7 +179,7 @@ def main():
 
     # 1. 功能选择标志 (把 hl 和 clk 提为核心互斥命令)
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--find", action="store_true", help="探测模式 (F8 抓取信息)")
+    group.add_argument("--find", action="store_true", help="探测模式 (Ctrl+左键抓取控件信息)")
     group.add_argument("--get", action="store_true", help="获取目标元素的 UI 信息")
     group.add_argument("--if", action="store_true", help="判断元素是否存在 (返回 true/false)")
     group.add_argument("--hl", action="store_true", help="高亮目标元素")

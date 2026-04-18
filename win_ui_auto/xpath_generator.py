@@ -2,12 +2,37 @@
 USE_SHORT_XPATH = True
 OMIT_DEFAULT_INDEX = True
 
+# WinUI / UWP 等常见运行时生成的 AutomationId，写入 XPath 易碎；默认不写入（外壳与逐段均生效）
+OMIT_AUTOMATION_ID_IN_XPATH = True
+
+# 与 capture_overlay.py 中 RegisterClass 一致；该 HWND 不应作为业务 XPath 锚点
+CAPTURE_OVERLAY_CLASS = "WinUiAuto_CaptureOverlay"
+
+
+def _is_capture_overlay_node(node: dict) -> bool:
+    return (node.get("ClassName") or "") == CAPTURE_OVERLAY_CLASS
+
+
+def _filter_parent_chain(parent_chain):
+    """去掉桌面伪节点与本工具探测遮罩，避免 XPath 锚到仅 --find 存在的窗口。"""
+    out = []
+    for p in parent_chain:
+        if p.get("is_desktop", False):
+            continue
+        if _is_capture_overlay_node(p):
+            continue
+        out.append(p)
+    return out
+
 
 def generate_xpath(control_info, parent_chain):
     """
     稳妥版 XPath 生成器：兼顾“抗 UI 结构变化”与“精准定位”
     """
-    filtered_parents = [p for p in parent_chain if not p.get("is_desktop", False)]
+    if _is_capture_overlay_node(control_info):
+        return ""
+
+    filtered_parents = _filter_parent_chain(parent_chain)
     all_nodes = filtered_parents + [control_info]
 
     # ==========================================
@@ -31,7 +56,7 @@ def generate_xpath(control_info, parent_chain):
     shell_node = all_nodes[shell_index]
     shell_type = _short_type(shell_node.get("ControlType", ""))
     shell_attrs = []
-    if shell_node.get("AutomationId"):
+    if shell_node.get("AutomationId") and not OMIT_AUTOMATION_ID_IN_XPATH:
         shell_attrs.append(f"@AutomationId='{_escape_xpath_string(shell_node['AutomationId'])}'")
     if shell_node.get("ClassName"):
         shell_attrs.append(f"@ClassName='{_escape_xpath_string(shell_node['ClassName'])}'")
@@ -48,13 +73,6 @@ def generate_xpath(control_info, parent_chain):
     # 3. 动态降级策略：评估目标控件的“抗干扰能力”
     # ==========================================
     target_name = (control_info.get("Name") or "").strip()
-    target_aid = (control_info.get("AutomationId") or "").strip()
-
-    # 策略 A0：目标有稳定 AutomationId，优先用它跨级跳跃（通常比 Name 稳定）
-    if target_aid:
-        target_type = _short_type(control_info.get("ControlType", ""))
-        target_seg = f"{target_type}[@AutomationId='{_escape_xpath_string(target_aid)}']"
-        return f"//{shell_seg}//{target_seg}"
 
     # 策略 A：目标有明确 Name，允许使用 // 跨级跳跃 (抗 UI 结构变化)
     if target_name:
@@ -72,15 +90,14 @@ def generate_xpath(control_info, parent_chain):
         return f"//{shell_seg}//{target_seg}"
 
     # 策略 B：目标特征极弱，强制回退逐层路径 (保精准)
-    return _generate_fallback(control_info, parent_chain, shell_index)
+    return _generate_fallback(control_info, filtered_parents, shell_index)
 
 
-def _generate_fallback(control_info, parent_chain, start_index=0):
+def _generate_fallback(control_info, filtered_parents, start_index=0):
     """
     稳妥逐层生成：从确定的外壳层开始，一步步向下精确定位
     """
-    filtered_parents = [p for p in parent_chain if not p.get("is_desktop", False)]
-    all_nodes = filtered_parents + [control_info]
+    all_nodes = list(filtered_parents) + [control_info]
     segments = []
     app_name = control_info.get("application", {}).get("name", "")
 
@@ -107,7 +124,11 @@ def _make_segment(control_type, class_name=None, same_type_index=None, name=None
     attributes = []
     position = same_type_index + 1 if same_type_index is not None else None
 
-    if automation_id and str(automation_id).strip():
+    if (
+        not OMIT_AUTOMATION_ID_IN_XPATH
+        and automation_id
+        and str(automation_id).strip()
+    ):
         attributes.append(f"@AutomationId='{_escape_xpath_string(str(automation_id))}'")
     if name and name.strip():
         attributes.append(f"@Name='{_escape_xpath_string(name)}'")

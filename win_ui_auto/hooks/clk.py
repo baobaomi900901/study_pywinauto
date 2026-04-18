@@ -4,8 +4,17 @@ import time
 import fnmatch
 import ctypes
 import uiautomation as auto
-from hooks.locator import locate_by_xpath
+from hooks.locator import locate_by_xpath, locate_all_by_xpath
+from control_info import is_same_control
 from constants import DEBUG
+
+
+def _dedupe_controls(items):
+    out = []
+    for m in items:
+        if not any(is_same_control(m, x) for x in out):
+            out.append(m)
+    return out
 
 def force_focus_window(el):
     """强制将控件所属的顶层窗口置顶并恢复显示"""
@@ -64,23 +73,34 @@ def find_matches_recursive(el, pattern, max_deep, current_deep=0, found_elements
     return found_elements
 
 def run(xpath, timeout=10.0, match_pattern=None, deep=0, index=None):
-    # 1. 定位基准
-    base_el = locate_by_xpath(xpath, timeout)
-    if not base_el:
-        if DEBUG:
-            print(f"\n❌ 最终结果：未找到基准元素。")
-        print(False)
-        return False
-        sys.exit(1)
-
-    # 2. 查找目标
+    # 1. 解析目标列表（与 --hl 一致：无 --match 时用 locate_all 支持 --index 指向第 N 个同条件控件）
     final_targets = []
     if match_pattern:
+        base_el = locate_by_xpath(xpath, timeout)
+        if not base_el:
+            if DEBUG:
+                print(f"\n❌ 最终结果：未找到基准元素。")
+            print(False)
+            return False
         if DEBUG:
-            print(f"[*] 正在基准元素下搜索匹配 '{match_pattern}' 的子元素...")
-        final_targets = find_matches_recursive(base_el, match_pattern, deep)
+            print(f"[*] 在 XPath 全部匹配实例下搜索 '{match_pattern}' ...")
+        candidates = locate_all_by_xpath(xpath, timeout=timeout)
+        if not candidates:
+            candidates = [base_el]
+        merged = []
+        for c in candidates:
+            merged.extend(find_matches_recursive(c, match_pattern, deep))
+        final_targets = _dedupe_controls(merged)
     else:
-        final_targets = [base_el]
+        final_targets = locate_all_by_xpath(xpath, timeout=timeout)
+        if not final_targets:
+            base_el = locate_by_xpath(xpath, timeout)
+            if not base_el:
+                if DEBUG:
+                    print(f"\n❌ 最终结果：未找到基准元素。")
+                print(False)
+                return False
+            final_targets = [base_el]
 
     if not final_targets:
         print(f"❌ 未找到匹配项，无法执行点击。")
@@ -93,7 +113,10 @@ def run(xpath, timeout=10.0, match_pattern=None, deep=0, index=None):
         if 0 <= idx < len(final_targets):
             target_to_click = final_targets[idx]
         else:
-            print(f"❌ 索引 {index} 越界。")
+            print(
+                f"❌ 索引 {index} 越界（共 {len(final_targets)} 个匹配项，"
+                f"有效 --index 为 1..{len(final_targets)}）。"
+            )
             sys.exit(1)
     else:
         # 如果没填 index，默认点击第一个匹配到的

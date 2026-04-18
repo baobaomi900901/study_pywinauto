@@ -4,8 +4,17 @@ import time
 import fnmatch
 import ctypes
 import uiautomation as auto
-from highlight import HighlightWindow 
-from hooks.locator import locate_by_xpath
+from highlight import HighlightWindow
+from control_info import is_same_control
+from hooks.locator import locate_by_xpath, locate_all_by_xpath
+
+
+def _dedupe_controls(items):
+    out = []
+    for m in items:
+        if not any(is_same_control(m, x) for x in out):
+            out.append(m)
+    return out
 
 def force_focus_window(el):
     """强制将控件所属的顶层窗口置顶并恢复显示 (与 clk 保持逻辑一致)"""
@@ -67,20 +76,32 @@ def find_matches_recursive(el, pattern, max_deep, current_deep=0, found_elements
 
 def run(xpath, timeout=10.0, match_pattern=None, deep=0, index=None):
     # 1. 定位基准
-    base_el = locate_by_xpath(xpath, timeout)
-    
-    if not base_el:
-        print(f"\n❌ 最终结果：未找到基准元素。")
-        sys.exit(1)
-
-    # 2. 收集目标
     final_targets = []
     if match_pattern:
         search_pattern = match_pattern if "*" in match_pattern else f"*{match_pattern}*"
-        print(f"[*] 正在基准元素下深度搜索匹配 '{search_pattern}' 的子元素...")
-        final_targets = find_matches_recursive(base_el, search_pattern, deep)
+        candidates = locate_all_by_xpath(xpath, timeout=timeout)
+        if not candidates:
+            base_el = locate_by_xpath(xpath, timeout)
+            candidates = [base_el] if base_el else []
+        if not candidates:
+            print(f"\n❌ 最终结果：未找到基准元素。")
+            sys.exit(1)
+        print(
+            f"[*] 在 XPath 最后一档匹配的 {len(candidates)} 个实例下，"
+            f"深度搜索 Name/Value 匹配 '{search_pattern}' 的控件..."
+        )
+        merged = []
+        for c in candidates:
+            merged.extend(find_matches_recursive(c, search_pattern, deep))
+        final_targets = _dedupe_controls(merged)
     else:
-        final_targets = [base_el]
+        # 最后一档（如相同 AutomationId 的多个 Button）全部枚举，避免只高亮 foundIndex=1
+        final_targets = locate_all_by_xpath(xpath, timeout=timeout)
+        if not final_targets:
+            print(f"\n❌ 最终结果：未找到匹配元素。")
+            sys.exit(1)
+        if len(final_targets) > 1:
+            print(f"[*] XPath 在最后一档共命中 {len(final_targets)} 个控件，将依次高亮。")
 
     if not final_targets:
         print(f"❌ 未找到任何匹配项。")
@@ -104,9 +125,10 @@ def run(xpath, timeout=10.0, match_pattern=None, deep=0, index=None):
                 hw.update(rect.left, rect.top, rect.width(), rect.height())
                 time.sleep(3) 
             else:
-                print(f"❌ 索引越界。")
+                print(f"❌ 索引越界（共 {len(final_targets)} 个匹配项，有效 --index 为 1..{len(final_targets)}）。")
+                sys.exit(1)
         else:
-            # 批量高亮逻辑
+            # 批量高亮逻辑（含「同 XPath 多实例」全部闪烁）
             print(f"✅ 准备激活窗口并循环高亮 {len(final_targets)} 个匹配项...")
             # 批量时仅在开始前置顶一次
             force_focus_window(final_targets[0])
