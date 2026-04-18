@@ -66,3 +66,57 @@ def get_process_name(pid):
             kernel32.CloseHandle(handle)
     except Exception:
         return None
+
+
+def cleanup_stale_ui_tool_windows(log=None):
+    """
+    启动时清理上次异常退出遗留的：Ctrl 探测遮罩（WinUiAuto_CaptureOverlay）、
+    Tk 高亮框（标题 WinUiAuto_HighlightOverlay）。仅 PostMessage WM_CLOSE，不跨线程 DestroyWindow。
+    """
+    import time
+
+    from constants import CAPTURE_OVERLAY_CLASS, HIGHLIGHT_TOPLEVEL_TITLE
+
+    user32 = ctypes.windll.user32
+    WM_CLOSE = 0x0010
+    closed = []
+
+    @ctypes.WINFUNCTYPE(
+        ctypes.wintypes.BOOL,
+        ctypes.wintypes.HWND,
+        ctypes.wintypes.LPARAM,
+    )
+    def _enum(hwnd, _lparam):
+        try:
+            buf = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(hwnd, buf, 256)
+            cls = buf.value or ""
+            # 待机隐藏的遮罩不可见，仍需能清理
+            if cls == CAPTURE_OVERLAY_CLASS:
+                user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
+                closed.append(("overlay", hwnd))
+                return True
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            if cls == "TkTopLevel":
+                tbuf = ctypes.create_unicode_buffer(512)
+                user32.GetWindowTextW(hwnd, tbuf, 512)
+                title = (tbuf.value or "").strip()
+                if title == HIGHLIGHT_TOPLEVEL_TITLE:
+                    user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
+                    closed.append(("highlight", hwnd))
+        except Exception:
+            pass
+        return True
+
+    try:
+        user32.EnumWindows(_enum, 0)
+    except Exception:
+        pass
+    if closed and log:
+        try:
+            log(f"[cleanup] WM_CLOSE 遗留窗口: {closed}")
+        except Exception:
+            pass
+    if closed:
+        time.sleep(0.08)

@@ -5,8 +5,7 @@ OMIT_DEFAULT_INDEX = True
 # WinUI / UWP 等常见运行时生成的 AutomationId，写入 XPath 易碎；默认不写入（外壳与逐段均生效）
 OMIT_AUTOMATION_ID_IN_XPATH = True
 
-# 与 capture_overlay.py 中 RegisterClass 一致；该 HWND 不应作为业务 XPath 锚点
-CAPTURE_OVERLAY_CLASS = "WinUiAuto_CaptureOverlay"
+from constants import CAPTURE_OVERLAY_CLASS
 
 
 def _is_capture_overlay_node(node: dict) -> bool:
@@ -112,11 +111,13 @@ def _generate_fallback(control_info, filtered_parents, start_index=0):
             process_name=app_name if i == start_index else None
         )
         segments.append(seg)
-    # 关键：外壳到第一层用 '//'（允许跨过中间 Pane/Group），后续保持逐层 '/'
-    # 这样既避免 Window->Document 必须“直接子节点”的脆弱约束，又不至于全程跨级导致误命中
+    # 外壳到第一层用 '//'；后续段之间也用 '//'，避免单 '/' 被解析成 depth=1（仅直接子级），
+    # 在 WinUI / XAML 下中间常多一层不可见容器导致 --get 无法复现探查时的路径。
     if len(segments) >= 2:
-        return f"//{segments[0]}//" + "/".join(segments[1:])
-    return "//" + "/".join(segments)
+        return f"//{segments[0]}//" + "//".join(segments[1:])
+    if segments:
+        return "//" + segments[0]
+    return "//"
 
 
 def _make_segment(control_type, class_name=None, same_type_index=None, name=None, automation_id=None, process_name=None):

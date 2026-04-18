@@ -51,6 +51,7 @@ def get_text_for_match(el):
     return name, value
 
 def find_matches_recursive(el, pattern, max_deep, current_deep=0, found_elements=None):
+    """max_deep：从当前根算起可下探的最大层数（0 仅检查根）。"""
     if found_elements is None:
         found_elements = []
     if current_deep > max_deep:
@@ -58,21 +59,28 @@ def find_matches_recursive(el, pattern, max_deep, current_deep=0, found_elements
 
     name, value = get_text_for_match(el)
     search_pattern = pattern if "*" in pattern else f"*{pattern}*"
-    
+
     if fnmatch.fnmatch(name, search_pattern) or fnmatch.fnmatch(value, search_pattern):
-        # 点击动作必须要求元素是可交互的 (通常有坐标即可)
         rect = el.BoundingRectangle
         if rect and rect.width() > 0:
             found_elements.append(el)
 
+    if current_deep >= max_deep:
+        return found_elements
+
     try:
         for child in el.GetChildren():
             find_matches_recursive(child, pattern, max_deep, current_deep + 1, found_elements)
-    except:
+    except Exception:
         pass
     return found_elements
 
-def run(xpath, timeout=10.0, match_pattern=None, deep=0, index=None):
+
+def run(xpath, timeout=10.0, match_pattern=None, deep=None, index=None):
+    if match_pattern is not None and deep is None:
+        deep = 2
+    if deep is None:
+        deep = 0
     # 1. 解析目标列表（与 --hl 一致：无 --match 时用 locate_all 支持 --index 指向第 N 个同条件控件）
     final_targets = []
     if match_pattern:

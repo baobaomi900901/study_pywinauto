@@ -11,3 +11,8 @@ INSPECT_MOUSE_IDLE_TIMEOUT_SECONDS = 10.0
 
 # 高亮框扩展像素：防止边缘点击命中不稳
 HIGHLIGHT_PADDING_PX = 2
+
+# 与本工具窗口一致，供启动时清理残留（须与 capture_overlay / highlight 同步）
+CAPTURE_OVERLAY_CLASS = "WinUiAuto_CaptureOverlay"
+# Tk 顶层标题：用于 EnumWindows 识别探查红框（类名多为 TkTopLevel）
+HIGHLIGHT_TOPLEVEL_TITLE = "WinUiAuto_HighlightOverlay"

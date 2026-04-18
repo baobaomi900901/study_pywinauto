@@ -19,6 +19,17 @@ def _probe_debug_print(msg: str):
         print(msg, file=sys.stderr)
 
 
+VK_CONTROL = 0x11
+
+
+def _is_ctrl_key_physically_down():
+    """与遮罩 wndproc 一致：用于避免悬停线程 hide 遮罩时与用户 Ctrl+左键抢竞态。"""
+    try:
+        return (ctypes.windll.user32.GetKeyState(VK_CONTROL) & 0x8000) != 0
+    except Exception:
+        return False
+
+
 _clipboard_ctypes_ready = False
 
 
@@ -90,6 +101,8 @@ class UIProbe:
         self.last_mouse_move_ts = time.monotonic()
         self._last_capture_mono = None
         self._capture_queue = queue.Queue(maxsize=8)
+        # finally 里先于 join(UIA) 置 False，防止 UIA 线程在 Tk 已 teardown 后仍入队高亮
+        self._allow_highlight = True
 
         self.highlight = HighlightWindow()
         self.mouse_move = MouseMoveListener(on_move=self._on_mouse_move)
@@ -108,7 +121,8 @@ class UIProbe:
             self.overlay.hide()
         except Exception:
             pass
-        self.highlight.clear()
+        if self._allow_highlight:
+            self.highlight.clear()
         with self.control_lock:
             self.current_control = None
         print(f"\n[探查模式] 已自动关闭（{reason}）")
@@ -240,7 +254,12 @@ class UIProbe:
             time.sleep(0.12)
             return get_deepest_control(x, y, self.highlight.get_pid())
         finally:
-            if overlay_hidden and self.inspect_mode:
+            # 无 Ctrl 时不要 show：否则会把已待机隐藏的遮罩重新置顶挡鼠标
+            if (
+                overlay_hidden
+                and self.inspect_mode
+                and _is_ctrl_key_physically_down()
+            ):
                 try:
                     self.overlay.show()
                 except Exception:
@@ -322,6 +341,14 @@ class UIProbe:
         write_control_info_to_file(info)
         self._exit_inspect_mode("已抓取信息；如需继续请输入 1 重新开启")
 
+    def _hl_clear(self):
+        if self._allow_highlight:
+            self.highlight.clear()
+
+    def _hl_update(self, x, y, width, height):
+        if self._allow_highlight:
+            self.highlight.update(x, y, width, height)
+
     def _on_mouse_move(self, x, y):
         self.last_mouse_move_ts = time.monotonic()
         with self.coord_lock:
@@ -363,19 +390,23 @@ class UIProbe:
                     if not self.inspect_mode:
                         if pending_coord is not None:
                             pending_coord = None
-                            self.highlight.clear()
+                            self._hl_clear()
                             with self.control_lock:
                                 self.current_control = None
                         time.sleep(NON_INSPECT_SLEEP) # type: ignore
                         continue
 
                     now = time.time()
-                    if (pending_coord is not None and
-                            (now - last_move_time) >= HOVER_DELAY and # type: ignore
-                            pending_coord != self.last_processed_coord):
+                    # 按住 Ctrl 时不要 hide 遮罩：否则 Ctrl+左键会穿透到应用且无抓取（悬停循环与捕获抢窗口）
+                    if (
+                        pending_coord is not None
+                        and (now - last_move_time) >= HOVER_DELAY  # type: ignore
+                        and pending_coord != self.last_processed_coord
+                        and not _is_ctrl_key_physically_down()
+                    ):
                         x, y = pending_coord
                         try:
-                            self.highlight.clear()
+                            self._hl_clear()
                             time.sleep(CLEAR_DELAY) # type: ignore
 
                             # 探查模式下遮罩层会挡住命中，短暂隐藏以获取真实控件
@@ -395,7 +426,11 @@ class UIProbe:
                                 # 2. 原生 UIA 寻路机制
                                 control = get_deepest_control(x, y, self.highlight.get_pid())
                             finally:
-                                if overlay_hidden and self.inspect_mode:
+                                if (
+                                    overlay_hidden
+                                    and self.inspect_mode
+                                    and _is_ctrl_key_physically_down()
+                                ):
                                     try:
                                         self.overlay.show()
                                     except Exception:
@@ -405,13 +440,17 @@ class UIProbe:
                             if control:
                                 rect = control.BoundingRectangle
                                 if rect and rect.width() > 0 and rect.height() > 0:
-                                    self.highlight.update(rect.left, rect.top,
-                                                          rect.width(), rect.height())
+                                    self._hl_update(
+                                        rect.left,
+                                        rect.top,
+                                        rect.width(),
+                                        rect.height(),
+                                    )
                                 with self.control_lock:
                                     self.current_control = control
                                 self.last_processed_coord = pending_coord
                             else:
-                                self.highlight.clear()
+                                self._hl_clear()
                                 with self.control_lock:
                                     self.current_control = None
                                 self.last_processed_coord = pending_coord
@@ -461,6 +500,7 @@ class UIProbe:
                 elif user_input == "1":
                     self.inspect_mode = True
                     self.last_mouse_move_ts = time.monotonic()
+                    self._last_capture_mono = None
                     # 遮罩仅在按住 Ctrl 时创建；松开即销毁
                     print("探查模式已开启 → 移动鼠标至目标控件等待高亮；按住 Ctrl 再左键可抓取（不会触发应用点击）")
                 elif user_input == "2":
@@ -474,8 +514,14 @@ class UIProbe:
             print("\n用户中断")
         finally:
             self.running = False
-            self.highlight.stop()
+            self._allow_highlight = False
+            # 先停鼠标与遮罩、再等 UIA 线程退出，避免其仍向高亮队列 put 时 Tk 已被销毁（Tcl_AsyncDelete）
             self.mouse_move.stop()
             self.overlay.stop()
-            uia_thread.join(2)
+            uia_thread.join(20)
+            try:
+                self.highlight.stop()
+            except Exception:
+                pass
+            self.highlight = None
             print("探针服务已终止。")

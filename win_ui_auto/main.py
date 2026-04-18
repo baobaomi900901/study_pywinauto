@@ -72,7 +72,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from process_utils import get_window_class_name, hwnd_c_void_p
+from process_utils import (
+    cleanup_stale_ui_tool_windows,
+    get_window_class_name,
+    hwnd_c_void_p,
+)
 
 # 导入 Hooks 模块（get / el_if / hl / clk）
 try:
@@ -191,7 +195,12 @@ def main():
 
     # 3. 修饰参数 (新增 --type 和 --deep)
     parser.add_argument("--type", type=str, choices=["full", "text"], default="full", help="获取信息的类型")
-    parser.add_argument("--deep", type=int, default=0, help="向下遍历的深度")
+    parser.add_argument(
+        "--deep",
+        type=int,
+        default=None,
+        help="向下遍历深度；与 --hl/--clk 且带 --match 时未指定则默认 2，否则默认 0；显式传入优先生效",
+    )
     parser.add_argument(
         "--match",
         "--master",
@@ -208,6 +217,19 @@ def main():
         sys.exit(0)
 
     args = parser.parse_args()
+
+    if args.deep is None:
+        if args.match and (args.hl or args.clk):
+            args.deep = 2
+        else:
+            args.deep = 0
+
+    try:
+        cleanup_stale_ui_tool_windows(
+            log=write_main_log if DEBUG else None
+        )
+    except Exception:
+        pass
 
     # =========================================================
     enable_os_accessibility()

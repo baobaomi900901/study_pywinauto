@@ -3,7 +3,7 @@ import threading
 import queue
 import tkinter as tk
 import time
-from constants import HIGHLIGHT_PADDING_PX
+from constants import HIGHLIGHT_PADDING_PX, HIGHLIGHT_TOPLEVEL_TITLE
 
 
 class HighlightWindow:
@@ -15,8 +15,10 @@ class HighlightWindow:
         self.pid = None
         # 使用 Event 确保 pid 被正确获取后再返回给外层
         self.ready_event = threading.Event()
+        self._stopped = threading.Event()
 
-        self.thread = threading.Thread(target=self._run, daemon=True)
+        # 非 daemon：避免进程退出时强行掐断 Tcl 主循环触发 Tcl_AsyncDelete
+        self.thread = threading.Thread(target=self._run, daemon=False)
         self.thread.start()
 
         # 阻塞等待窗口初始化完成，确保外层调用 update 时窗口已就绪
@@ -24,6 +26,10 @@ class HighlightWindow:
 
     def _run(self):
         self.root = tk.Tk()
+        try:
+            self.root.title(HIGHLIGHT_TOPLEVEL_TITLE)
+        except Exception:
+            pass
         # 基础设置：无边框、置顶、透明色
         self.root.overrideredirect(True)
         self.root.attributes('-topmost', True)
@@ -77,7 +83,11 @@ class HighlightWindow:
                         self.root.withdraw()
 
                     elif cmd['action'] == 'quit':
-                        self.root.destroy()
+                        # 仅退出 mainloop；destroy 放在 mainloop 之后，避免与主线程竞态触发 Tcl_AsyncDelete
+                        try:
+                            self.root.quit()
+                        except Exception:
+                            pass
                         return
             except queue.Empty:
                 pass
@@ -86,6 +96,15 @@ class HighlightWindow:
 
         self.root.after(30, process_queue)
         self.root.mainloop()
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
+        # 在本线程释放引用，避免主线程 GC 时触碰已 teardown 的 Tcl interpreter（Tcl_AsyncDelete）
+        self.root = None
+        self.canvas = None
+        self.rect = None
+        self._stopped.set()
 
     def update(self, x, y, width, height):
         pad = int(HIGHLIGHT_PADDING_PX or 0)
@@ -100,7 +119,18 @@ class HighlightWindow:
         self.queue.put({'action': 'clear'})
 
     def stop(self):
-        self.queue.put({'action': 'quit'})
+        try:
+            self.queue.put_nowait({"action": "quit"})
+        except queue.Full:
+            try:
+                self.queue.put({"action": "quit"}, timeout=0.5)
+            except Exception:
+                pass
+        self._stopped.wait(timeout=12.0)
+        try:
+            self.thread.join(timeout=8.0)
+        except Exception:
+            pass
 
     def get_pid(self):
         return self.pid

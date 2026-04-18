@@ -4,6 +4,8 @@ import time
 from ctypes import wintypes
 import threading
 
+from constants import CAPTURE_OVERLAY_CLASS
+
 
 user32 = ctypes.windll.user32
 kernel32 = ctypes.windll.kernel32
@@ -50,7 +52,8 @@ LRESULT = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
 
 GWL_EXSTYLE = -20
 TIMER_ID_CTRL = 1
-TIMER_INTERVAL_MS = 30
+# 略短于 30ms，减少「松开 Ctrl 后立刻再按 Ctrl+左键」时遮罩尚未 Show 的窗口期
+TIMER_INTERVAL_MS = 16
 
 SWP_NOSIZE = 0x0001
 SWP_NOMOVE = 0x0002
@@ -218,7 +221,7 @@ class CaptureOverlay:
 
     def _run(self):
         h_instance = kernel32.GetModuleHandleW(None)
-        class_name = "WinUiAuto_CaptureOverlay"
+        class_name = CAPTURE_OVERLAY_CLASS
 
         WNDPROCTYPE = ctypes.WINFUNCTYPE(
             user32.DefWindowProcW.restype,
@@ -244,19 +247,33 @@ class CaptureOverlay:
                         enabled = bool(self._is_enabled())
                     except Exception:
                         enabled = False
+                    hpw = _hwnd_ptr(hwnd)
+                    ctrl = self._ctrl_down()
 
-                    want_overlay = (not self._stop.is_set()) and enabled and self._ctrl_down()
-                    if want_overlay:
+                    # 探查关闭或进程退出：销毁，外层循环下次 Ctrl 再 CreateWindow
+                    if self._stop.is_set() or not enabled:
                         try:
-                            user32.ShowWindow(_hwnd_ptr(hwnd), SW_SHOW)
+                            user32.DestroyWindow(hpw)
+                        except Exception:
+                            pass
+                        return 0
+
+                    # 探查仍开启：按住 Ctrl 时置顶拦截；松开 Ctrl 只隐藏+穿透，保留 HWND，
+                    # 避免反复 Destroy/Create 与悬停线程 hide/show 竞态导致第二次 Ctrl+左键穿透。
+                    if ctrl:
+                        try:
+                            user32.ShowWindow(hpw, SW_SHOW)
                         except Exception:
                             pass
                         if self._click_through:
                             self._set_click_through(hwnd, False)
                     else:
-                        # 松开 Ctrl 或关闭探查：销毁 HWND，避免长期占位 UIA / 误抓 XPath
                         try:
-                            user32.DestroyWindow(_hwnd_ptr(hwnd))
+                            self._set_click_through(hwnd, True)
+                        except Exception:
+                            pass
+                        try:
+                            user32.ShowWindow(hpw, SW_HIDE)
                         except Exception:
                             pass
                     return 0

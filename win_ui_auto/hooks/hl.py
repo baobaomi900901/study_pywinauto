@@ -50,31 +50,40 @@ def get_text_for_match(el):
     return name, value
 
 def find_matches_recursive(el, pattern, max_deep, current_deep=0, found_elements=None):
-    """递归搜索符合模糊匹配条件的子元素"""
+    """递归搜索符合模糊匹配条件的子元素。max_deep：从当前根算起可下探的最大层数（0 仅检查根）。"""
     if found_elements is None:
         found_elements = []
-    
+
     if current_deep > max_deep:
         return found_elements
 
     name, value = get_text_for_match(el)
-    
+
     # 模糊匹配：支持通配符
     if fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(value, pattern):
         rect = el.BoundingRectangle
         if rect and rect.width() > 0:
             found_elements.append(el)
 
+    if current_deep >= max_deep:
+        return found_elements
+
     try:
         children = el.GetChildren()
         for child in children:
             find_matches_recursive(child, pattern, max_deep, current_deep + 1, found_elements)
-    except:
+    except Exception:
         pass
-    
+
     return found_elements
 
-def run(xpath, timeout=10.0, match_pattern=None, deep=0, index=None):
+
+def run(xpath, timeout=10.0, match_pattern=None, deep=None, index=None):
+    # main 传入 deep=None 时签名默认值不会生效，须在此与 --match 默认深度对齐
+    if match_pattern is not None and deep is None:
+        deep = 2
+    if deep is None:
+        deep = 0
     # 1. 定位基准
     final_targets = []
     if match_pattern:
